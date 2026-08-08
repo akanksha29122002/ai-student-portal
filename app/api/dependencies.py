@@ -22,6 +22,16 @@ except Exception:
     _SqlAlchemyUnitOfWork = None  # type: ignore[assignment]
     _SQLALCHEMY_AVAILABLE = False
 
+# When DEMO_MODE=true the whole stack uses InMemoryStore — seed data is
+# written there and must be readable by auth and all frontend routes.
+_demo_mode: bool = getattr(settings, "demo_mode", False)
+
+
+def _use_database() -> bool:
+    """Return True only when SQLAlchemy + a real DB session are available
+    AND demo_mode is not forcing in-memory operation."""
+    return _SQLALCHEMY_AVAILABLE and SessionLocal is not None and not _demo_mode
+
 # ---------------------------------------------------------------------------
 # Singletons — shared across requests in the same process
 # ---------------------------------------------------------------------------
@@ -74,10 +84,11 @@ async def get_async_service() -> AsyncIterator[AsyncDailyLoopService]:
 
     Wraps the UoW in EventDispatchingUnitOfWork so domain events appended
     during the transaction are published to the event bus after commit.
-    Falls back to in-memory repos when PostgreSQL is not available.
+    Falls back to in-memory repos when PostgreSQL is not available or
+    when demo_mode is active.
     """
     bus = _get_bus()
-    if _SQLALCHEMY_AVAILABLE and SessionLocal is not None:
+    if _use_database():
         async with SessionLocal() as session:
             uow = EventDispatchingUnitOfWork(_SqlAlchemyUnitOfWork(session), bus)
             yield AsyncDailyLoopService(uow)
@@ -89,7 +100,7 @@ async def get_async_service() -> AsyncIterator[AsyncDailyLoopService]:
 async def get_auth_service():
     """Provide an AuthService for the current request."""
     from app.services.auth_service import AuthService
-    if _SQLALCHEMY_AVAILABLE and SessionLocal is not None:
+    if _use_database():
         async with SessionLocal() as session:
             yield AuthService(_SqlAlchemyUnitOfWork(session))
     else:

@@ -48,15 +48,19 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
-    # CORS — allow the frontend dev server and any configured frontend URL
+    # CORS — allow the frontend dev server, any configured frontend URL, and
+    # any additional origins from the CORS_ORIGINS env var.
     frontend_url = getattr(settings, "frontend_url", "http://localhost:3000")
+    extra_origins: list[str] = getattr(settings, "cors_origins", []) or []
+    allowed_origins = list({
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        frontend_url,
+        *extra_origins,
+    })
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=[
-            "http://localhost:3000",
-            "http://127.0.0.1:3000",
-            frontend_url,
-        ],
+        allow_origins=allowed_origins,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
