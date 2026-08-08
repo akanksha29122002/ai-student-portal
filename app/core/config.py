@@ -70,7 +70,8 @@ if SettingsConfigDict is not None:
 
         # API
         api_v1_prefix: str = "/api/v1"
-        cors_origins: list[str] = Field(default_factory=list)
+        # Comma-separated string so plain env var values work on all platforms
+        cors_origins: str = Field(default="")
 
         # Logging
         log_level: str = "INFO"

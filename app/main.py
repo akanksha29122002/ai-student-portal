@@ -51,7 +51,8 @@ def create_app() -> FastAPI:
     # CORS — allow the frontend dev server, any configured frontend URL, and
     # any additional origins from the CORS_ORIGINS env var.
     frontend_url = getattr(settings, "frontend_url", "http://localhost:3000")
-    extra_origins: list[str] = getattr(settings, "cors_origins", []) or []
+    _raw = getattr(settings, "cors_origins", "") or ""
+    extra_origins: list[str] = [o.strip() for o in _raw.split(",") if o.strip()]
     allowed_origins = list({
         "http://localhost:3000",
         "http://127.0.0.1:3000",
