@@ -1,0 +1,65 @@
+services:
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      PROJECT_DEFENSE_DATABASE_URL: postgresql+asyncpg://project_defense:project_defense@postgres:5432/project_defense
+      PROJECT_DEFENSE_REDIS_URL: redis://redis:6379/0
+      PROJECT_DEFENSE_ENVIRONMENT: development
+      PROJECT_DEFENSE_DEV_AUTH_BYPASS: "true"
+      PROJECT_DEFENSE_SECRET_KEY: change-me-before-production-use
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    volumes:
+      - .:/app
+    working_dir: /app
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: project_defense
+      POSTGRES_USER: project_defense
+      POSTGRES_PASSWORD: project_defense
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U project_defense -d project_defense"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  postgres_test:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: project_defense_test
+      POSTGRES_USER: project_defense
+      POSTGRES_PASSWORD: project_defense
+    ports:
+      - "5433:5432"
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U project_defense -d project_defense_test"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:

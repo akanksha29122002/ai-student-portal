@@ -1,0 +1,43 @@
+[project]
+name = "project-defense-ai"
+version = "0.3.0"
+description = "Daily task automation and mentor-reviewed AI evaluation platform for engineering project defense."
+requires-python = ">=3.12"
+dependencies = [
+  "fastapi>=0.115",
+  "uvicorn>=0.30",
+  "pydantic>=2.8",
+  "pydantic-settings>=2.4",
+  "sqlalchemy>=2.0",
+  "alembic>=1.13",
+  "asyncpg>=0.29",
+  "greenlet>=3.0",
+  "psycopg2-binary>=2.9",
+  "redis>=5.0",
+  "celery>=5.4",
+  "PyJWT>=2.8",
+  "passlib[bcrypt]>=1.7",
+  "bcrypt>=3.2,<4.0",
+  "httpx>=0.27",
+  "anthropic>=0.30"
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0",
+  "pytest-asyncio>=0.24",
+  "pytest-cov>=5.0"
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+asyncio_mode = "auto"
+
+[tool.coverage.run]
+source = ["app"]
+omit = ["app/workers/*", "migrations/*"]
+
+[tool.coverage.report]
+fail_under = 90
+show_missing = true
