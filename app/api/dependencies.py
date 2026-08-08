@@ -62,10 +62,11 @@ _bearer = HTTPBearer(auto_error=False)
 def _get_bus():
     """Return the active event bus.
 
-    Uses RedisStreamEventBus in production when redis is reachable,
+    Uses RedisStreamEventBus in production (non-demo) when redis is reachable,
     falls back to the module-level InMemoryEventBus otherwise.
+    Demo mode always uses InMemoryEventBus — no Redis required.
     """
-    if settings.environment == Environment.PRODUCTION:
+    if settings.environment == Environment.PRODUCTION and not _demo_mode:
         try:
             from app.events.redis_bus import make_redis_bus
             return make_redis_bus()
