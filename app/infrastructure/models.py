@@ -354,3 +354,213 @@ class CommitFileModel(Base):
 
     commit: Mapped[CommitModel] = relationship(back_populates="files")
 
+
+# ---------------------------------------------------------------------------
+# Milestone 7 — Personalized 14-Day Learning Plans
+# ---------------------------------------------------------------------------
+
+
+class StudentProfileAnalysisModel(Base, TimestampMixin):
+    """AI-generated deep analysis of a student's skills, gaps, and learning profile."""
+    __tablename__ = "student_profile_analyses"
+
+    id: Mapped[UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    student_id: Mapped[UUID] = mapped_column(ForeignKey("students.id"), index=True, nullable=False)
+    organization_id: Mapped[UUID] = mapped_column(ForeignKey("organizations.id"), index=True, nullable=False)
+    status: Mapped[str] = mapped_column(String(40), nullable=False, default="pending", index=True)
+    raw_profile: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
+    observed_skills: Mapped[dict] = mapped_column(JSONB, nullable=False, default=list)
+    inferred_skills: Mapped[dict] = mapped_column(JSONB, nullable=False, default=list)
+    unknown_areas: Mapped[dict] = mapped_column(JSONB, nullable=False, default=list)
+    learning_style: Mapped[str | None] = mapped_column(String(80))
+    risk_factors: Mapped[dict] = mapped_column(JSONB, nullable=False, default=list)
+    strengths: Mapped[dict] = mapped_column(JSONB, nullable=False, default=list)
+    ai_model: Mapped[str | None] = mapped_column(String(80))
+    confidence: Mapped[float | None] = mapped_column(nullable=True)
+    generated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class SkillAssessmentModel(Base, TimestampMixin):
+    """Baseline skill score (0–100) per dimension for a student."""
+    __tablename__ = "skill_assessments"
+    __table_args__ = (UniqueConstraint("student_id", "dimension", name="uq_skill_assessments_student_dim"),)
+
+    id: Mapped[UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    student_id: Mapped[UUID] = mapped_column(ForeignKey("students.id"), index=True, nullable=False)
+    organization_id: Mapped[UUID] = mapped_column(ForeignKey("organizations.id"), index=True, nullable=False)
+    profile_analysis_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("student_profile_analyses.id"), index=True
+    )
+    dimension: Mapped[str] = mapped_column(String(80), nullable=False, index=True)
+    score: Mapped[int] = mapped_column(Integer, nullable=False)
+    evidence_sources: Mapped[dict] = mapped_column(JSONB, nullable=False, default=list)
+    confidence: Mapped[str] = mapped_column(String(40), nullable=False, default="unknown")
+    assessed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC))
+
+
+class LearningPlanModel(Base, TimestampMixin):
+    """14-day personalised learning plan for a single student."""
+    __tablename__ = "learning_plans"
+
+    id: Mapped[UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    student_id: Mapped[UUID] = mapped_column(ForeignKey("students.id"), index=True, nullable=False)
+    organization_id: Mapped[UUID] = mapped_column(ForeignKey("organizations.id"), index=True, nullable=False)
+    batch_id: Mapped[UUID] = mapped_column(ForeignKey("batches.id"), index=True, nullable=False)
+    status: Mapped[str] = mapped_column(String(40), nullable=False, default="draft", index=True)
+    start_date: Mapped[date] = mapped_column(Date, nullable=False)
+    end_date: Mapped[date] = mapped_column(Date, nullable=False)
+    total_days: Mapped[int] = mapped_column(Integer, nullable=False, default=14)
+    ai_model: Mapped[str | None] = mapped_column(String(80))
+    generation_prompt_hash: Mapped[str | None] = mapped_column(String(64))
+
+    days: Mapped[list["LearningPlanDayModel"]] = relationship(back_populates="plan", order_by="LearningPlanDayModel.day_number")
+
+
+class LearningPlanDayModel(Base, TimestampMixin):
+    """Single day entry within a LearningPlan."""
+    __tablename__ = "learning_plan_days"
+    __table_args__ = (UniqueConstraint("plan_id", "day_number", name="uq_plan_days_plan_day"),)
+
+    id: Mapped[UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    plan_id: Mapped[UUID] = mapped_column(ForeignKey("learning_plans.id"), index=True, nullable=False)
+    student_id: Mapped[UUID] = mapped_column(ForeignKey("students.id"), index=True, nullable=False)
+    organization_id: Mapped[UUID] = mapped_column(ForeignKey("organizations.id"), index=True, nullable=False)
+    day_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    scheduled_date: Mapped[date] = mapped_column(Date, nullable=False, index=True)
+    status: Mapped[str] = mapped_column(String(40), nullable=False, default="locked", index=True)
+    task_id: Mapped[UUID | None] = mapped_column(ForeignKey("daily_tasks.id"), index=True)
+    target_skills: Mapped[dict] = mapped_column(JSONB, nullable=False, default=list)
+    unlock_condition: Mapped[dict | None] = mapped_column(JSONB)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    score: Mapped[int | None] = mapped_column(Integer)
+    notes: Mapped[str | None] = mapped_column(Text)
+
+    plan: Mapped[LearningPlanModel] = relationship(back_populates="days")
+
+
+class TaskDependencyModel(Base, TimestampMixin):
+    """Directed prerequisite relationship between two tasks."""
+    __tablename__ = "task_dependencies"
+    __table_args__ = (UniqueConstraint("task_id", "depends_on_task_id", name="uq_task_deps_pair"),)
+
+    id: Mapped[UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    task_id: Mapped[UUID] = mapped_column(ForeignKey("daily_tasks.id"), index=True, nullable=False)
+    depends_on_task_id: Mapped[UUID] = mapped_column(ForeignKey("daily_tasks.id"), index=True, nullable=False)
+    organization_id: Mapped[UUID] = mapped_column(ForeignKey("organizations.id"), index=True, nullable=False)
+    dependency_type: Mapped[str] = mapped_column(String(40), nullable=False, default="prerequisite")
+
+
+class SubmissionEvidenceModel(Base, TimestampMixin):
+    """Structured evidence pieces attached to a submission (multi-modal)."""
+    __tablename__ = "submission_evidences"
+
+    id: Mapped[UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    submission_id: Mapped[UUID] = mapped_column(ForeignKey("submissions.id"), index=True, nullable=False)
+    organization_id: Mapped[UUID] = mapped_column(ForeignKey("organizations.id"), index=True, nullable=False)
+    evidence_type: Mapped[str] = mapped_column(String(80), nullable=False, index=True)
+    url: Mapped[str | None] = mapped_column(String(500))
+    content: Mapped[str | None] = mapped_column(Text)
+    metadata_json: Mapped[dict] = mapped_column("metadata", JSONB, nullable=False, default=dict)
+    collected_by: Mapped[str] = mapped_column(String(40), nullable=False, default="student")
+    collected_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC))
+    quality_score: Mapped[int | None] = mapped_column(Integer)
+
+
+class VerificationResultModel(Base, TimestampMixin):
+    """Automated verification result for a submission."""
+    __tablename__ = "verification_results"
+
+    id: Mapped[UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    submission_id: Mapped[UUID] = mapped_column(ForeignKey("submissions.id"), index=True, nullable=False)
+    organization_id: Mapped[UUID] = mapped_column(ForeignKey("organizations.id"), index=True, nullable=False)
+    plan_day_id: Mapped[UUID | None] = mapped_column(ForeignKey("learning_plan_days.id"), index=True)
+    status: Mapped[str] = mapped_column(String(40), nullable=False, default="pending", index=True)
+    overall_score: Mapped[int | None] = mapped_column(Integer)
+    verdict: Mapped[str | None] = mapped_column(String(80))
+    ai_model: Mapped[str | None] = mapped_column(String(80))
+    verification_prompt_version: Mapped[str | None] = mapped_column(String(80))
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    error_message: Mapped[str | None] = mapped_column(Text)
+    escalate_to_mentor: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    escalation_reason: Mapped[str | None] = mapped_column(Text)
+
+    evidences: Mapped[list["VerificationEvidenceModel"]] = relationship(back_populates="verification_result")
+
+
+class VerificationEvidenceModel(Base, TimestampMixin):
+    """Individual evidence piece within a verification result."""
+    __tablename__ = "verification_evidences"
+
+    id: Mapped[UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    verification_result_id: Mapped[UUID] = mapped_column(
+        ForeignKey("verification_results.id"), index=True, nullable=False
+    )
+    organization_id: Mapped[UUID] = mapped_column(ForeignKey("organizations.id"), index=True, nullable=False)
+    evidence_type: Mapped[str] = mapped_column(String(80), nullable=False)
+    source: Mapped[str] = mapped_column(String(80), nullable=False)
+    content: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
+    quality: Mapped[str] = mapped_column(String(40), nullable=False, default="moderate")
+    weight: Mapped[float] = mapped_column(nullable=False, default=1.0)
+
+    verification_result: Mapped[VerificationResultModel] = relationship(back_populates="evidences")
+
+
+class StudentProgressModel(Base, TimestampMixin):
+    """Daily progress snapshot for a student within a learning plan."""
+    __tablename__ = "student_progress"
+    __table_args__ = (UniqueConstraint("student_id", "snapshot_date", name="uq_student_progress_date"),)
+
+    id: Mapped[UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    student_id: Mapped[UUID] = mapped_column(ForeignKey("students.id"), index=True, nullable=False)
+    organization_id: Mapped[UUID] = mapped_column(ForeignKey("organizations.id"), index=True, nullable=False)
+    plan_id: Mapped[UUID | None] = mapped_column(ForeignKey("learning_plans.id"), index=True)
+    snapshot_date: Mapped[date] = mapped_column(Date, nullable=False, index=True)
+    day_number: Mapped[int | None] = mapped_column(Integer)
+    days_completed: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    days_remaining: Mapped[int] = mapped_column(Integer, nullable=False, default=14)
+    current_streak: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    longest_streak: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    average_score: Mapped[float | None] = mapped_column(nullable=True)
+    skill_velocity: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
+    completed_task_ids: Mapped[dict] = mapped_column(JSONB, nullable=False, default=list)
+
+
+class DailyAutomationRunModel(Base, TimestampMixin):
+    """Record of each daily automation job execution."""
+    __tablename__ = "daily_automation_runs"
+
+    id: Mapped[UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    organization_id: Mapped[UUID] = mapped_column(ForeignKey("organizations.id"), index=True, nullable=False)
+    batch_id: Mapped[UUID | None] = mapped_column(ForeignKey("batches.id"), index=True)
+    run_date: Mapped[date] = mapped_column(Date, nullable=False, index=True)
+    status: Mapped[str] = mapped_column(String(40), nullable=False, default="pending", index=True)
+    students_processed: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    tasks_generated: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    verifications_triggered: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    plans_adapted: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    errors: Mapped[dict] = mapped_column(JSONB, nullable=False, default=list)
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class AIInteractionLogModel(Base):
+    """Audit log for every AI model call (cost tracking + debugging)."""
+    __tablename__ = "ai_interaction_logs"
+
+    id: Mapped[UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    organization_id: Mapped[UUID] = mapped_column(ForeignKey("organizations.id"), index=True, nullable=False)
+    student_id: Mapped[UUID | None] = mapped_column(ForeignKey("students.id"), index=True)
+    interaction_type: Mapped[str] = mapped_column(String(80), nullable=False, index=True)
+    ai_model: Mapped[str] = mapped_column(String(80), nullable=False)
+    prompt_tokens: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    completion_tokens: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    latency_ms: Mapped[int | None] = mapped_column(Integer)
+    success: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    error_message: Mapped[str | None] = mapped_column(Text)
+    request_hash: Mapped[str | None] = mapped_column(String(64), index=True)
+    metadata_json: Mapped[dict] = mapped_column("metadata", JSONB, nullable=False, default=dict)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False, index=True
+    )
+

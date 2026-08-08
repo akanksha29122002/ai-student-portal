@@ -86,3 +86,92 @@ class WebhookEventStatus(StrEnum):
     FAILED = "failed"
     DUPLICATE = "duplicate"
 
+
+# ---------------------------------------------------------------------------
+# Milestone 7 — Personalized 14-Day Learning Plans
+# ---------------------------------------------------------------------------
+
+
+class LearningPlanStatus(StrEnum):
+    DRAFT = "draft"
+    ACTIVE = "active"
+    COMPLETED = "completed"
+    ABANDONED = "abandoned"
+
+
+class PlanDayStatus(StrEnum):
+    LOCKED = "locked"
+    AVAILABLE = "available"
+    IN_PROGRESS = "in_progress"
+    COMPLETED = "completed"
+    SKIPPED = "skipped"
+    BLOCKED = "blocked"
+
+
+class SkillConfidence(StrEnum):
+    OBSERVED = "observed"
+    INFERRED = "inferred"
+    UNKNOWN = "unknown"
+
+
+class VerificationStatus(StrEnum):
+    PENDING = "pending"
+    RUNNING = "running"
+    PASSED = "passed"
+    FAILED = "failed"
+    NEEDS_HUMAN_REVIEW = "needs_human_review"
+    ERROR = "error"
+
+
+class EvidenceQuality(StrEnum):
+    STRONG = "strong"
+    MODERATE = "moderate"
+    WEAK = "weak"
+    MISSING = "missing"
+
+
+class SubmissionEvidenceType(StrEnum):
+    GITHUB_COMMIT = "github_commit"
+    TRANSCRIPT = "transcript"
+    SCREEN_RECORDING = "screen_recording"
+    WRITTEN_EXPLANATION = "written_explanation"
+    LIVE_DEMO = "live_demo"
+    PR_REVIEW = "pr_review"
+    CODE_SNIPPET = "code_snippet"
+
+
+class EvidenceCollectedBy(StrEnum):
+    STUDENT = "student"
+    SYSTEM = "system"
+    MENTOR = "mentor"
+
+
+class DependencyType(StrEnum):
+    PREREQUISITE = "prerequisite"
+    SOFT = "soft"
+    OPTIONAL = "optional"
+
+
+class AutomationRunStatus(StrEnum):
+    PENDING = "pending"
+    RUNNING = "running"
+    COMPLETED = "completed"
+    FAILED = "failed"
+    PARTIAL = "partial"
+
+
+class AIInteractionType(StrEnum):
+    PROFILE_ANALYSIS = "profile_analysis"
+    SKILL_ASSESSMENT = "skill_assessment"
+    PLAN_GENERATION = "plan_generation"
+    TASK_ADAPTATION = "task_adaptation"
+    VERIFICATION = "verification"
+    TASK_GENERATION = "task_generation"
+
+
+class ProfileAnalysisStatus(StrEnum):
+    PENDING = "pending"
+    RUNNING = "running"
+    COMPLETE = "complete"
+    FAILED = "failed"
+

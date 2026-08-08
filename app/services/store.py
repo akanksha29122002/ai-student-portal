@@ -21,6 +21,30 @@ from app.schemas.core import (
     Task,
     TaskCreate,
 )
+from app.schemas.m7 import (
+    AIInteractionLog,
+    AIInteractionLogCreate,
+    DailyAutomationRun,
+    DailyAutomationRunCreate,
+    LearningPlan,
+    LearningPlanCreate,
+    LearningPlanDay,
+    LearningPlanDayCreate,
+    SkillAssessment,
+    SkillAssessmentCreate,
+    StudentProfileAnalysis,
+    StudentProfileAnalysisCreate,
+    StudentProgress,
+    StudentProgressCreate,
+    SubmissionEvidence,
+    SubmissionEvidenceCreate,
+    TaskDependency,
+    TaskDependencyCreate,
+    VerificationEvidence,
+    VerificationEvidenceCreate,
+    VerificationResult,
+    VerificationResultCreate,
+)
 from app.domain.enums import SubmissionStatus
 
 
@@ -39,6 +63,18 @@ class InMemoryStore:
         self._users_by_email: dict[str, UUID] = {}
         self.refresh_tokens: dict[UUID, RefreshTokenRecord] = {}
         self._refresh_tokens_by_hash: dict[str, UUID] = {}
+        # Milestone 7 collections
+        self.student_profile_analyses: dict[UUID, StudentProfileAnalysis] = {}
+        self.skill_assessments: dict[UUID, SkillAssessment] = {}
+        self.learning_plans: dict[UUID, LearningPlan] = {}
+        self.learning_plan_days: dict[UUID, LearningPlanDay] = {}
+        self.task_dependencies: dict[UUID, TaskDependency] = {}
+        self.submission_evidences: dict[UUID, SubmissionEvidence] = {}
+        self.verification_results: dict[UUID, VerificationResult] = {}
+        self.verification_evidences: dict[UUID, VerificationEvidence] = {}
+        self.student_progress: dict[UUID, StudentProgress] = {}
+        self.daily_automation_runs: dict[UUID, DailyAutomationRun] = {}
+        self.ai_interaction_logs: list[AIInteractionLog] = []
 
     def create_organization(self, payload: OrganizationCreate) -> Organization:
         entity = Organization(**payload.model_dump())
@@ -186,6 +222,196 @@ class InMemoryStore:
         )
         self.events.append(event)
         return event
+
+    # ------------------------------------------------------------------
+    # Milestone 7 — Learning Plans
+    # ------------------------------------------------------------------
+
+    def create_student_profile_analysis(self, payload: StudentProfileAnalysisCreate) -> StudentProfileAnalysis:
+        entity = StudentProfileAnalysis(**payload.model_dump())
+        self.student_profile_analyses[entity.id] = entity
+        return entity
+
+    def get_student_profile_analysis(self, analysis_id: UUID) -> StudentProfileAnalysis | None:
+        return self.student_profile_analyses.get(analysis_id)
+
+    def get_latest_profile_analysis(self, student_id: UUID) -> StudentProfileAnalysis | None:
+        analyses = [a for a in self.student_profile_analyses.values() if a.student_id == student_id]
+        return max(analyses, key=lambda a: a.created_at) if analyses else None
+
+    def update_profile_analysis(self, analysis_id: UUID, **updates) -> StudentProfileAnalysis | None:
+        entity = self.student_profile_analyses.get(analysis_id)
+        if entity:
+            self.student_profile_analyses[analysis_id] = entity.model_copy(
+                update={**updates, "updated_at": datetime.now(UTC)}
+            )
+        return self.student_profile_analyses.get(analysis_id)
+
+    def create_skill_assessment(self, payload: SkillAssessmentCreate) -> SkillAssessment:
+        entity = SkillAssessment(**payload.model_dump())
+        self.skill_assessments[entity.id] = entity
+        return entity
+
+    def list_skill_assessments(self, student_id: UUID) -> list[SkillAssessment]:
+        return [a for a in self.skill_assessments.values() if a.student_id == student_id]
+
+    def upsert_skill_assessment(self, payload: SkillAssessmentCreate) -> SkillAssessment:
+        existing = next(
+            (a for a in self.skill_assessments.values()
+             if a.student_id == payload.student_id and a.dimension == payload.dimension),
+            None,
+        )
+        if existing:
+            updated = existing.model_copy(update={**payload.model_dump(), "updated_at": datetime.now(UTC)})
+            self.skill_assessments[existing.id] = updated
+            return updated
+        return self.create_skill_assessment(payload)
+
+    def create_learning_plan(self, payload: LearningPlanCreate) -> LearningPlan:
+        entity = LearningPlan(**payload.model_dump())
+        self.learning_plans[entity.id] = entity
+        return entity
+
+    def get_learning_plan(self, plan_id: UUID) -> LearningPlan | None:
+        return self.learning_plans.get(plan_id)
+
+    def get_active_plan(self, student_id: UUID) -> LearningPlan | None:
+        return next(
+            (p for p in self.learning_plans.values()
+             if p.student_id == student_id and p.status == "active"),
+            None,
+        )
+
+    def list_learning_plans(self, student_id: UUID) -> list[LearningPlan]:
+        return [p for p in self.learning_plans.values() if p.student_id == student_id]
+
+    def update_learning_plan(self, plan_id: UUID, **updates) -> LearningPlan | None:
+        entity = self.learning_plans.get(plan_id)
+        if entity:
+            self.learning_plans[plan_id] = entity.model_copy(
+                update={**updates, "updated_at": datetime.now(UTC)}
+            )
+        return self.learning_plans.get(plan_id)
+
+    def create_learning_plan_day(self, payload: LearningPlanDayCreate) -> LearningPlanDay:
+        entity = LearningPlanDay(**payload.model_dump())
+        self.learning_plan_days[entity.id] = entity
+        return entity
+
+    def get_learning_plan_day(self, day_id: UUID) -> LearningPlanDay | None:
+        return self.learning_plan_days.get(day_id)
+
+    def list_plan_days(self, plan_id: UUID) -> list[LearningPlanDay]:
+        return sorted(
+            [d for d in self.learning_plan_days.values() if d.plan_id == plan_id],
+            key=lambda d: d.day_number,
+        )
+
+    def get_plan_day_by_number(self, plan_id: UUID, day_number: int) -> LearningPlanDay | None:
+        return next(
+            (d for d in self.learning_plan_days.values()
+             if d.plan_id == plan_id and d.day_number == day_number),
+            None,
+        )
+
+    def update_plan_day(self, day_id: UUID, **updates) -> LearningPlanDay | None:
+        entity = self.learning_plan_days.get(day_id)
+        if entity:
+            self.learning_plan_days[day_id] = entity.model_copy(
+                update={**updates, "updated_at": datetime.now(UTC)}
+            )
+        return self.learning_plan_days.get(day_id)
+
+    def create_task_dependency(self, payload: TaskDependencyCreate) -> TaskDependency:
+        entity = TaskDependency(**payload.model_dump())
+        self.task_dependencies[entity.id] = entity
+        return entity
+
+    def list_task_dependencies(self, task_id: UUID) -> list[TaskDependency]:
+        return [d for d in self.task_dependencies.values() if d.task_id == task_id]
+
+    def create_submission_evidence(self, payload: SubmissionEvidenceCreate) -> SubmissionEvidence:
+        entity = SubmissionEvidence(**payload.model_dump())
+        self.submission_evidences[entity.id] = entity
+        return entity
+
+    def list_submission_evidences(self, submission_id: UUID) -> list[SubmissionEvidence]:
+        return [e for e in self.submission_evidences.values() if e.submission_id == submission_id]
+
+    def create_verification_result(self, payload: VerificationResultCreate) -> VerificationResult:
+        entity = VerificationResult(**payload.model_dump())
+        self.verification_results[entity.id] = entity
+        return entity
+
+    def get_verification_result(self, result_id: UUID) -> VerificationResult | None:
+        return self.verification_results.get(result_id)
+
+    def get_latest_verification(self, submission_id: UUID) -> VerificationResult | None:
+        results = [r for r in self.verification_results.values() if r.submission_id == submission_id]
+        return max(results, key=lambda r: r.created_at) if results else None
+
+    def update_verification_result(self, result_id: UUID, **updates) -> VerificationResult | None:
+        entity = self.verification_results.get(result_id)
+        if entity:
+            self.verification_results[result_id] = entity.model_copy(
+                update={**updates, "updated_at": datetime.now(UTC)}
+            )
+        return self.verification_results.get(result_id)
+
+    def create_verification_evidence(self, payload: VerificationEvidenceCreate) -> VerificationEvidence:
+        entity = VerificationEvidence(**payload.model_dump())
+        self.verification_evidences[entity.id] = entity
+        return entity
+
+    def list_verification_evidences(self, result_id: UUID) -> list[VerificationEvidence]:
+        return [e for e in self.verification_evidences.values() if e.verification_result_id == result_id]
+
+    def upsert_student_progress(self, payload: StudentProgressCreate) -> StudentProgress:
+        existing = next(
+            (p for p in self.student_progress.values()
+             if p.student_id == payload.student_id and p.snapshot_date == payload.snapshot_date),
+            None,
+        )
+        if existing:
+            updated = existing.model_copy(update={**payload.model_dump(), "updated_at": datetime.now(UTC)})
+            self.student_progress[existing.id] = updated
+            return updated
+        entity = StudentProgress(**payload.model_dump())
+        self.student_progress[entity.id] = entity
+        return entity
+
+    def get_student_progress(self, student_id: UUID) -> list[StudentProgress]:
+        return sorted(
+            [p for p in self.student_progress.values() if p.student_id == student_id],
+            key=lambda p: p.snapshot_date,
+        )
+
+    def create_daily_automation_run(self, payload: DailyAutomationRunCreate) -> DailyAutomationRun:
+        entity = DailyAutomationRun(**payload.model_dump())
+        self.daily_automation_runs[entity.id] = entity
+        return entity
+
+    def get_daily_automation_run(self, run_id: UUID) -> DailyAutomationRun | None:
+        return self.daily_automation_runs.get(run_id)
+
+    def update_daily_automation_run(self, run_id: UUID, **updates) -> DailyAutomationRun | None:
+        entity = self.daily_automation_runs.get(run_id)
+        if entity:
+            self.daily_automation_runs[run_id] = entity.model_copy(
+                update={**updates, "updated_at": datetime.now(UTC)}
+            )
+        return self.daily_automation_runs.get(run_id)
+
+    def log_ai_interaction(self, payload: AIInteractionLogCreate) -> AIInteractionLog:
+        entity = AIInteractionLog(**payload.model_dump())
+        self.ai_interaction_logs.append(entity)
+        return entity
+
+    def list_ai_interactions(self, student_id: UUID | None = None, limit: int = 100) -> list[AIInteractionLog]:
+        logs = self.ai_interaction_logs
+        if student_id:
+            logs = [l for l in logs if l.student_id == student_id]
+        return list(reversed(logs))[:limit]
 
 
 store = InMemoryStore()
