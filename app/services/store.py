@@ -110,6 +110,20 @@ class InMemoryStore:
         self.mentor_reviews[entity.id] = entity
         return entity
 
+    def list_students_for_org(self, org_id: UUID) -> list[Student]:
+        return [s for s in self.students.values() if s.organization_id == org_id]
+
+    def get_student_by_email(self, email: str) -> Student | None:
+        email_lower = email.lower()
+        return next((s for s in self.students.values() if s.email.lower() == email_lower), None)
+
+    def list_submissions_for_student(self, student_id: UUID) -> list[Submission]:
+        return [s for s in self.submissions.values() if s.student_id == student_id]
+
+    def list_batches_for_org(self, org_id: UUID) -> list:
+        from app.schemas.core import Batch
+        return [b for b in self.batches.values() if b.organization_id == org_id]
+
     def list_batch_submissions(self, batch_id: UUID) -> list[Submission]:
         task_ids = {task.id for task in self.tasks.values() if task.batch_id == batch_id}
         return [submission for submission in self.submissions.values() if submission.task_id in task_ids]

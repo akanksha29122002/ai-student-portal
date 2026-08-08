@@ -1,11 +1,13 @@
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.agents_router import router as agents_router
 from app.api.auth_router import router as auth_router
 from app.api.errors import register_exception_handlers
 from app.api.evaluation_router import router as evaluation_router
+from app.api.frontend_router import router as frontend_router
 from app.api.github_router import router as github_router
 from app.api.routes import router
 from app.core.config import Environment, settings
@@ -14,6 +16,13 @@ from app.core.logging import RequestContextMiddleware, SecureHeadersMiddleware, 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    if getattr(settings, "demo_mode", False):
+        try:
+            from app.scripts.seed_demo import seed_demo
+            await seed_demo()
+        except Exception as exc:
+            import logging
+            logging.getLogger("project_defense").warning("Demo seed failed: %s", exc)
     yield
     from app.infrastructure.database import engine
     if engine is not None:
@@ -35,14 +44,30 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title=settings.app_name,
         version=settings.app_version,
-        description="Daily task automation and mentor-reviewed AI evaluation for engineering project defense.",
+        description="AI-powered daily project defense and engineering evaluation.",
         lifespan=lifespan,
     )
+
+    # CORS — allow the frontend dev server and any configured frontend URL
+    frontend_url = getattr(settings, "frontend_url", "http://localhost:3000")
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=[
+            "http://localhost:3000",
+            "http://127.0.0.1:3000",
+            frontend_url,
+        ],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
     app.add_middleware(SecureHeadersMiddleware)
     app.add_middleware(RequestContextMiddleware)
     register_exception_handlers(app)
     app.include_router(auth_router)
     app.include_router(router)
+    app.include_router(frontend_router)
     app.include_router(github_router)
     app.include_router(agents_router)
     app.include_router(evaluation_router)

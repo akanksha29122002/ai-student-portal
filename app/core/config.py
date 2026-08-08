@@ -62,6 +62,12 @@ if SettingsConfigDict is not None:
         # Below this confidence the evaluation is escalated to a human mentor
         ai_confidence_threshold: float = Field(default=0.70, ge=0.0, le=1.0)
 
+        # Demo mode — seeds rich demo data at startup; never enable in production
+        demo_mode: bool = Field(default=False)
+
+        # CORS — allowed frontend origin(s) for demo
+        frontend_url: str = Field(default="http://localhost:3000")
+
         # API
         api_v1_prefix: str = "/api/v1"
         cors_origins: list[str] = Field(default_factory=list)
@@ -106,6 +112,8 @@ else:
             self.anthropic_model = os.getenv("PROJECT_DEFENSE_ANTHROPIC_MODEL", "claude-haiku-4-5-20251001")
             self.ai_evaluation_sync_mode = os.getenv("PROJECT_DEFENSE_AI_EVALUATION_SYNC_MODE", "true").lower() == "true"
             self.ai_confidence_threshold = float(os.getenv("PROJECT_DEFENSE_AI_CONFIDENCE_THRESHOLD", "0.70"))
+            self.demo_mode = os.getenv("PROJECT_DEFENSE_DEMO_MODE", "false").lower() == "true"
+            self.frontend_url = os.getenv("PROJECT_DEFENSE_FRONTEND_URL", "http://localhost:3000")
             self.api_v1_prefix = os.getenv("PROJECT_DEFENSE_API_V1_PREFIX", "/api/v1")
             self.cors_origins = os.getenv("PROJECT_DEFENSE_CORS_ORIGINS", "").split(",") if os.getenv("PROJECT_DEFENSE_CORS_ORIGINS") else []
             self.log_level = os.getenv("PROJECT_DEFENSE_LOG_LEVEL", "INFO")
