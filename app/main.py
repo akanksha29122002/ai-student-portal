@@ -10,6 +10,7 @@ from app.api.evaluation_router import router as evaluation_router
 from app.api.frontend_router import router as frontend_router
 from app.api.github_router import router as github_router
 from app.api.import_router import router as import_router
+from app.api.m7_router import router as m7_router
 from app.api.routes import router
 from app.core.config import Environment, settings
 from app.core.logging import RequestContextMiddleware, SecureHeadersMiddleware, configure_logging
@@ -78,6 +79,7 @@ def create_app() -> FastAPI:
     app.include_router(agents_router)
     app.include_router(evaluation_router)
     app.include_router(import_router)
+    app.include_router(m7_router)
     return app
 
 
