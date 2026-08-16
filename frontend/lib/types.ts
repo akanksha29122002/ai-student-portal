@@ -137,3 +137,107 @@ export interface EvaluationResponse {
 }
 
 export type MentorDecision = "APPROVED" | "REJECTED" | "REQUEST_CHANGES" | "OVERRIDE_SCORE";
+
+// ---------------------------------------------------------------------------
+// Milestone 7 — Learning Plans
+// ---------------------------------------------------------------------------
+
+export type PlanDayStatus = "locked" | "available" | "in_progress" | "completed" | "skipped" | "blocked";
+export type LearningPlanStatus = "draft" | "active" | "completed" | "abandoned";
+
+export interface LearningPlan {
+  id: string;
+  student_id: string;
+  organization_id: string;
+  batch_id: string;
+  status: LearningPlanStatus;
+  start_date: string;
+  end_date: string;
+  total_days: number;
+  created_at: string;
+}
+
+export interface LearningPlanDay {
+  id: string;
+  plan_id: string;
+  student_id: string;
+  day_number: number;
+  scheduled_date: string;
+  status: PlanDayStatus;
+  task_id: string | null;
+  target_skills: string[];
+  unlock_condition: Record<string, unknown> | null;
+  completed_at: string | null;
+  score: number | null;
+  notes: string | null;
+}
+
+export interface SkillAssessment {
+  id: string;
+  student_id: string;
+  dimension: string;
+  score: number;
+  confidence: "observed" | "inferred" | "unknown";
+  assessed_at: string;
+}
+
+export interface StudentProfileAnalysis {
+  id: string;
+  student_id: string;
+  status: "pending" | "running" | "complete" | "failed";
+  observed_skills: Array<{ name: string; level: string; evidence: string }>;
+  inferred_skills: Array<{ name: string; level: string; reasoning: string }>;
+  unknown_areas: string[];
+  learning_style: string | null;
+  risk_factors: Array<{ factor: string; description: string }>;
+  strengths: string[];
+  ai_model: string | null;
+  confidence: number | null;
+  generated_at: string | null;
+}
+
+export interface VerificationResult {
+  id: string;
+  submission_id: string;
+  status: "pending" | "running" | "passed" | "failed" | "needs_human_review" | "error";
+  overall_score: number | null;
+  verdict: string | null;
+  escalate_to_mentor: boolean;
+  escalation_reason: string | null;
+  completed_at: string | null;
+}
+
+export interface StudentProgress {
+  id: string;
+  student_id: string;
+  snapshot_date: string;
+  day_number: number | null;
+  days_completed: number;
+  days_remaining: number;
+  current_streak: number;
+  longest_streak: number;
+  average_score: number | null;
+}
+
+export interface ReadinessReport {
+  student_id: string;
+  student_name: string;
+  plan_id: string | null;
+  total_days: number;
+  completed_days: number;
+  average_score: number | null;
+  completion_rate: number;
+  total_submissions: number;
+  skill_summary: Array<{ dimension: string; score: number; confidence: string }>;
+  strengths: string[];
+  risk_factors: Array<{ factor: string; description: string }>;
+  ready_for_defense: boolean;
+}
+
+export interface ImportResult {
+  imported: number;
+  skipped: number;
+  errors: Array<{ row: number; email?: string; reason: string }>;
+  student_ids: string[];
+  generated_passwords: Array<{ email: string; password: string }>;
+}

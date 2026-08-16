@@ -27,6 +27,8 @@ export default function MentorLayout({ children }: { children: React.ReactNode }
   const navItems = [
     { href: "/mentor", label: "Dashboard" },
     { href: "/mentor/evaluations", label: "Evaluations" },
+    { href: "/mentor/students/import", label: "Import Students" },
+    { href: "/mentor/escalations", label: "Escalations" },
   ];
 
   return (

@@ -3,18 +3,26 @@ services:
     name: project-defense-ai-api
     runtime: python
     buildCommand: pip install -e .
-    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    startCommand: alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /health
     envVars:
       - key: PROJECT_DEFENSE_ENVIRONMENT
         value: production
       - key: PROJECT_DEFENSE_DEMO_MODE
-        value: "true"
+        value: "false"
       - key: PROJECT_DEFENSE_DEV_AUTH_BYPASS
         value: "false"
+      - key: PROJECT_DEFENSE_DB_POOL_SIZE
+        value: "5"
+      - key: PROJECT_DEFENSE_DB_MAX_OVERFLOW
+        value: "5"
       - key: PROJECT_DEFENSE_LOG_LEVEL
         value: INFO
       - key: PROJECT_DEFENSE_SECRET_KEY
         generateValue: true
+      # Required for real tracker persistence. Use the Neon pooled connection string.
+      # Example: postgresql+asyncpg://USER:PASSWORD@HOST/DB?ssl=require
+      - key: PROJECT_DEFENSE_DATABASE_URL
+        sync: false
       # Set PROJECT_DEFENSE_FRONTEND_URL after Vercel deploys frontend
       # Set PROJECT_DEFENSE_CORS_ORIGINS to the same Vercel URL

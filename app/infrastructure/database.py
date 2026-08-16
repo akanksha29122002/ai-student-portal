@@ -1,6 +1,7 @@
 from collections.abc import AsyncIterator
 
 from app.core.config import settings
+from app.core.database_url import normalize_async_database_url
 from app.shared.exceptions import InfrastructureException
 
 try:
@@ -11,12 +12,12 @@ except ModuleNotFoundError:
     async_sessionmaker = None
     create_async_engine = None
 
-
 def create_engine(database_url: str | None = None) -> "AsyncEngine":
     if create_async_engine is None:
         raise InfrastructureException("SQLAlchemy is not installed. Install project dependencies before using PostgreSQL.")
+    normalized_url = normalize_async_database_url(database_url or settings.database_url)
     return create_async_engine(
-        database_url or settings.database_url,
+        normalized_url,
         pool_pre_ping=True,
         pool_size=settings.db_pool_size,
         max_overflow=settings.db_max_overflow,

@@ -1,4 +1,5 @@
 from collections.abc import AsyncIterator
+import os
 from uuid import UUID
 
 from fastapi import Depends
@@ -30,7 +31,11 @@ _demo_mode: bool = getattr(settings, "demo_mode", False)
 def _use_database() -> bool:
     """Return True only when SQLAlchemy + a real DB session are available
     AND demo_mode is not forcing in-memory operation."""
-    return _SQLALCHEMY_AVAILABLE and SessionLocal is not None and not _demo_mode
+    database_requested = (
+        settings.environment == Environment.PRODUCTION
+        or "PROJECT_DEFENSE_DATABASE_URL" in os.environ
+    )
+    return _SQLALCHEMY_AVAILABLE and SessionLocal is not None and not _demo_mode and database_requested
 
 # ---------------------------------------------------------------------------
 # Singletons — shared across requests in the same process

@@ -161,7 +161,7 @@ export default function MentorDashboard() {
               {rows.map(({ student, task, submission, evaluation }, i) => (
                 <tr key={student.id} className={`border-b border-slate-50 last:border-0 hover:bg-slate-50 transition-colors ${i % 2 === 0 ? "" : "bg-slate-50/30"}`}>
                   <td className="px-4 py-3">
-                    <div className="font-medium text-slate-800">{student.full_name}</div>
+                    <Link href={`/mentor/students/${student.id}`} className="font-medium text-slate-800 hover:text-indigo-600">{student.full_name}</Link>
                     <div className="text-xs text-slate-400">{student.email}</div>
                   </td>
                   <td className="px-4 py-3 hidden sm:table-cell">

@@ -33,12 +33,20 @@ def event_loop_policy():
 async def db_session():
     """Yield a real async session connected to the test database."""
     import asyncio
+    from sqlalchemy import text
     from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
     from app.core.config import settings
 
     engine = create_async_engine(settings.test_database_url, pool_pre_ping=True)
     factory = async_sessionmaker(engine, expire_on_commit=False)
+
+    try:
+        async with engine.connect() as connection:
+            await connection.execute(text("select 1"))
+    except Exception as exc:
+        await engine.dispose()
+        pytest.skip(f"PostgreSQL test database is not available: {exc}")
 
     async with factory() as session:
         yield session

@@ -48,18 +48,26 @@ _TRACK_MAP: dict[str, Track] = {
 }
 
 
+def _normalize_header(header: str) -> str:
+    return header.replace("\ufeff", "").strip().lower()
+
+
 def _map_headers(raw_headers: list[str]) -> dict[str, str]:
     """Return {raw_header: canonical_field} for each recognized header."""
     return {
-        h: _HEADER_MAP[h.strip().lower()]
+        _normalize_header(h): _HEADER_MAP[_normalize_header(h)]
         for h in raw_headers
-        if h.strip().lower() in _HEADER_MAP
+        if _normalize_header(h) in _HEADER_MAP
     }
 
 
 def _map_row(row: dict, header_map: dict[str, str]) -> dict[str, str]:
     """Normalize a raw row dict using the header map."""
-    return {header_map[k]: v for k, v in row.items() if k in header_map and v}
+    return {
+        header_map[_normalize_header(k)]: v
+        for k, v in row.items()
+        if _normalize_header(k) in header_map and v
+    }
 
 
 def _random_password(length: int = 16) -> str:

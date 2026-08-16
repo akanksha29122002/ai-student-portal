@@ -109,3 +109,78 @@ export const getStudentSubmissions = (studentId: string) =>
   request<Submission[]>(`/students/${studentId}/submissions`);
 
 export const listBatches = () => request<Batch[]>("/batches");
+
+// ---------------------------------------------------------------------------
+// Milestone 7 — Learning Plans, Profile Analysis, Verification
+// ---------------------------------------------------------------------------
+import {
+  LearningPlan, LearningPlanDay, SkillAssessment, StudentProfileAnalysis,
+  StudentProgress, ReadinessReport, ImportResult,
+} from "./types";
+
+// Student — today's plan day
+export const getTodayTask = (studentId: string) =>
+  request<{ day: LearningPlanDay | null; task: Task | null }>(`/students/${studentId}/today`);
+
+// Learning plan
+export const generateLearningPlan = (studentId: string) =>
+  request<{ plan: LearningPlan; days: LearningPlanDay[] }>(
+    `/students/${studentId}/learning-plan`,
+    { method: "POST" },
+  );
+
+export const getLearningPlan = (studentId: string) =>
+  request<{ plan: LearningPlan; days: LearningPlanDay[] }>(
+    `/students/${studentId}/learning-plan`,
+  );
+
+// Skill profile
+export const analyzeStudentProfile = (studentId: string, rawProfile: Record<string, unknown> = {}) =>
+  request<StudentProfileAnalysis>(`/students/${studentId}/analyze`, {
+    method: "POST",
+    body: JSON.stringify(rawProfile),
+  });
+
+export const getStudentProfile = (studentId: string) =>
+  request<StudentProfileAnalysis>(`/students/${studentId}/profile`);
+
+export const getStudentSkills = (studentId: string) =>
+  request<{ student_id: string; assessments: SkillAssessment[] }>(
+    `/students/${studentId}/skills`,
+  );
+
+// Progress
+export const getStudentProgress = (studentId: string) =>
+  request<{ student_id: string; progress_history: StudentProgress[]; current_skills: SkillAssessment[] }>(
+    `/students/${studentId}/progress`,
+  );
+
+export const getReadinessReport = (studentId: string) =>
+  request<ReadinessReport>(`/students/${studentId}/readiness-report`);
+
+// Verification
+export const verifySubmission = (submissionId: string) =>
+  request<unknown>(`/submissions/${submissionId}/verify`, { method: "POST" });
+
+// Import
+export const importStudents = async (
+  batchId: string,
+  organizationId: string,
+  file: File,
+): Promise<ImportResult> => {
+  const token = (await import("./auth")).getAccessToken();
+  const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+  const form = new FormData();
+  form.append("file", file);
+  form.append("organization_id", organizationId);
+  const res = await fetch(`${BASE}/import/batches/${batchId}/students`, {
+    method: "POST",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: form,
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.detail ?? `HTTP ${res.status}`);
+  }
+  return res.json();
+};
