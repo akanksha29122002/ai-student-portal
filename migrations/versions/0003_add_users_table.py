@@ -1,7 +1,7 @@
 """Add users table for authentication.
 
 Revision ID: 0003
-Revises: 0002
+Revises: 0002_event_store_optimizations
 Create Date: 2026-08-07
 """
 from alembic import op
@@ -9,7 +9,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import UUID
 
 revision = "0003"
-down_revision = "0002"
+down_revision = "0002_event_store_optimizations"
 branch_labels = None
 depends_on = None
 
