@@ -26,7 +26,7 @@ from app.schemas.core import (
     Task,
     TaskCreate,
 )
-from app.shared.exceptions import NotFoundException, ValidationException
+from app.shared.exceptions import ConflictException, NotFoundException, ValidationException
 
 from typing import TYPE_CHECKING
 
@@ -46,8 +46,14 @@ class AsyncDailyLoopService:
         async with self.uow:
             return await self.uow.batches.create(payload)
 
+    async def list_batches_for_org(self, org_id: UUID):
+        return await self.uow.batches.list_for_org(org_id)
+
     async def create_student(self, payload: StudentCreate):
         async with self.uow:
+            existing = await self.uow.students.get_by_email(payload.email, payload.organization_id)
+            if existing is not None:
+                raise ConflictException(f"Student email '{payload.email}' already exists in this organization")
             student = await self.uow.students.create(payload)
             await self.uow.events.append(
                 StudentRegistered(
@@ -57,6 +63,21 @@ class AsyncDailyLoopService:
                 )
             )
             return student
+
+    async def get_student(self, student_id: UUID):
+        student = await self.uow.students.get(student_id)
+        if student is None:
+            raise NotFoundException("Student not found")
+        return student
+
+    async def get_student_by_email(self, email: str, organization_id: UUID | None = None):
+        student = await self.uow.students.get_by_email(email, organization_id)
+        if student is None:
+            raise NotFoundException("No student profile found for this user")
+        return student
+
+    async def list_students_for_org(self, org_id: UUID):
+        return await self.uow.students.list_for_org(org_id)
 
     async def create_project(self, payload: ProjectCreate):
         async with self.uow:
@@ -91,6 +112,9 @@ class AsyncDailyLoopService:
                 )
             )
             return submission
+
+    async def list_submissions_for_student(self, student_id: UUID):
+        return await self.uow.submissions.list_for_student(student_id)
 
     async def evaluate_submission(self, submission_id: UUID):
         submission = await self.uow.submissions.get(submission_id)

@@ -70,6 +70,15 @@ class SqlAlchemyBatchRepository(SqlAlchemyRepository):
         await self.session.refresh(model)
         return Batch.model_validate(model, from_attributes=True)
 
+    async def list_for_org(self, org_id: UUID) -> list[Batch]:
+        result = await self.session.execute(
+            select(BatchModel).where(
+                BatchModel.organization_id == org_id,
+                BatchModel.deleted_at.is_(None),
+            )
+        )
+        return [Batch.model_validate(m, from_attributes=True) for m in result.scalars().all()]
+
 
 class SqlAlchemyStudentRepository(SqlAlchemyRepository):
     async def create(self, payload: StudentCreate) -> Student:
@@ -88,6 +97,27 @@ class SqlAlchemyStudentRepository(SqlAlchemyRepository):
         )
         model = result.scalar_one_or_none()
         return Student.model_validate(model, from_attributes=True) if model else None
+
+    async def get_by_email(self, email: str, organization_id: UUID | None = None) -> Student | None:
+        query = select(StudentModel).where(
+            StudentModel.email == email.lower(),
+            StudentModel.deleted_at.is_(None),
+        )
+        if organization_id is not None:
+            query = query.where(StudentModel.organization_id == organization_id)
+        query = query.order_by(StudentModel.created_at.desc())
+        result = await self.session.execute(query)
+        model = result.scalars().first()
+        return Student.model_validate(model, from_attributes=True) if model else None
+
+    async def list_for_org(self, org_id: UUID) -> list[Student]:
+        result = await self.session.execute(
+            select(StudentModel).where(
+                StudentModel.organization_id == org_id,
+                StudentModel.deleted_at.is_(None),
+            )
+        )
+        return [Student.model_validate(m, from_attributes=True) for m in result.scalars().all()]
 
 
 class SqlAlchemyProjectRepository(SqlAlchemyRepository):
@@ -184,6 +214,15 @@ class SqlAlchemySubmissionRepository(SqlAlchemyRepository):
             .join(DailyTaskModel, SubmissionModel.task_id == DailyTaskModel.id)
             .where(
                 DailyTaskModel.batch_id == batch_id,
+                SubmissionModel.deleted_at.is_(None),
+            )
+        )
+        return [Submission.model_validate(m, from_attributes=True) for m in result.scalars().all()]
+
+    async def list_for_student(self, student_id: UUID) -> list[Submission]:
+        result = await self.session.execute(
+            select(SubmissionModel).where(
+                SubmissionModel.student_id == student_id,
                 SubmissionModel.deleted_at.is_(None),
             )
         )

@@ -40,6 +40,9 @@ class MemoryBatchRepository:
     def create(self, payload: BatchCreate) -> Batch:
         return self.store.create_batch(payload)
 
+    def list_for_org(self, org_id: UUID) -> list[Batch]:
+        return self.store.list_batches_for_org(org_id)
+
 
 class MemoryStudentRepository:
     def __init__(self, store: InMemoryStore) -> None:
@@ -50,6 +53,21 @@ class MemoryStudentRepository:
 
     def get(self, student_id: UUID) -> Student | None:
         return self.store.get_student(student_id)
+
+    def get_by_email(self, email: str, organization_id: UUID | None = None) -> Student | None:
+        email_lower = email.lower()
+        return next(
+            (
+                student
+                for student in self.store.students.values()
+                if student.email.lower() == email_lower
+                and (organization_id is None or student.organization_id == organization_id)
+            ),
+            None,
+        )
+
+    def list_for_org(self, org_id: UUID) -> list[Student]:
+        return self.store.list_students_for_org(org_id)
 
 
 class MemoryProjectRepository:
@@ -95,6 +113,9 @@ class MemorySubmissionRepository:
 
     def list_for_batch(self, batch_id: UUID) -> list[Submission]:
         return self.store.list_batch_submissions(batch_id)
+
+    def list_for_student(self, student_id: UUID) -> list[Submission]:
+        return self.store.list_submissions_for_student(student_id)
 
 
 class MemoryEvaluationRepository:
@@ -232,6 +253,9 @@ class AsyncMemoryBatchRepository:
     async def create(self, payload: BatchCreate) -> Batch:
         return self._inner.create(payload)
 
+    async def list_for_org(self, org_id: UUID) -> list[Batch]:
+        return self._inner.list_for_org(org_id)
+
 
 class AsyncMemoryStudentRepository:
     def __init__(self, inner: MemoryStudentRepository) -> None:
@@ -242,6 +266,12 @@ class AsyncMemoryStudentRepository:
 
     async def get(self, student_id: UUID) -> Student | None:
         return self._inner.get(student_id)
+
+    async def get_by_email(self, email: str, organization_id: UUID | None = None) -> Student | None:
+        return self._inner.get_by_email(email, organization_id)
+
+    async def list_for_org(self, org_id: UUID) -> list[Student]:
+        return self._inner.list_for_org(org_id)
 
 
 class AsyncMemoryProjectRepository:
@@ -287,6 +317,9 @@ class AsyncMemorySubmissionRepository:
 
     async def list_for_batch(self, batch_id: UUID) -> list[Submission]:
         return self._inner.list_for_batch(batch_id)
+
+    async def list_for_student(self, student_id: UUID) -> list[Submission]:
+        return self._inner.list_for_student(student_id)
 
 
 class AsyncMemoryEvaluationRepository:
@@ -396,4 +429,3 @@ class AsyncMemoryUnitOfWork:
 
     async def begin_nested(self) -> "AsyncMemoryUnitOfWork":
         return AsyncMemoryUnitOfWork(self._sync_uow.store)
-
