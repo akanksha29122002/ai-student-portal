@@ -1,6 +1,6 @@
 """initial backend architecture
 
-Revision ID: 0001_initial_backend_architecture
+Revision ID: 0001
 Revises:
 Create Date: 2026-08-07
 """
@@ -8,7 +8,7 @@ from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
-revision = "0001_initial_backend_architecture"
+revision = "0001"
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -269,4 +269,3 @@ def downgrade() -> None:
         "organizations",
     ]:
         op.drop_table(table)
-

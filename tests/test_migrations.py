@@ -5,7 +5,7 @@ from alembic.script import ScriptDirectory
 
 
 def test_initial_migration_contains_core_tables_and_event_store():
-    migration = Path("migrations/versions/0001_initial_backend_architecture.py").read_text()
+    migration = next(Path("migrations/versions").glob("0001_*.py")).read_text()
 
     for table_name in [
         "organizations",
@@ -30,14 +30,31 @@ def test_initial_migration_contains_core_tables_and_event_store():
 def test_alembic_revision_graph_is_single_linear_chain():
     script = ScriptDirectory.from_config(Config("alembic.ini"))
     revisions = list(script.walk_revisions())
+    ordered = list(reversed(revisions))
 
     assert script.get_heads() == ["0007"]
-    assert [revision.revision for revision in reversed(revisions)] == [
-        "0001_initial_backend_architecture",
-        "0002_event_store_optimizations",
+    assert [revision.revision for revision in ordered] == [
+        "0001",
+        "0002",
         "0003",
         "0004",
         "0005",
         "0006",
         "0007",
     ]
+    assert [revision.down_revision for revision in ordered] == [
+        None,
+        "0001",
+        "0002",
+        "0003",
+        "0004",
+        "0005",
+        "0006",
+    ]
+
+
+def test_alembic_revision_ids_fit_internal_length_convention():
+    script = ScriptDirectory.from_config(Config("alembic.ini"))
+
+    for revision in script.walk_revisions():
+        assert len(revision.revision) <= 16

@@ -1,15 +1,15 @@
 """event store optimizations
 
-Revision ID: 0002_event_store_optimizations
-Revises: 0001_initial_backend_architecture
+Revision ID: 0002
+Revises: 0001
 Create Date: 2026-08-07
 """
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
-revision = "0002_event_store_optimizations"
-down_revision = "0001_initial_backend_architecture"
+revision = "0002"
+down_revision = "0001"
 branch_labels = None
 depends_on = None
 
