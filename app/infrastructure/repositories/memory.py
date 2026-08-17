@@ -22,7 +22,13 @@ from app.schemas.core import (
     Task,
     TaskCreate,
 )
-from app.schemas.m7 import StudentProjectProfile, StudentProjectProfileCreate, StudentProjectProfileUpdate
+from app.schemas.m7 import (
+    StudentProjectProfile,
+    StudentProjectProfileCreate,
+    StudentProjectProfileUpdate,
+    TaskAssignment,
+    TaskAssignmentCreate,
+)
 from app.services.store import InMemoryStore
 
 
@@ -120,6 +126,23 @@ class MemoryTaskRepository:
 
     def list_for_student(self, student_id: UUID) -> list[Task]:
         return self.store.list_student_tasks(student_id)
+
+
+class MemoryTaskAssignmentRepository:
+    def __init__(self, store: InMemoryStore) -> None:
+        self.store = store
+
+    def create(self, payload: TaskAssignmentCreate) -> TaskAssignment:
+        return self.store.create_task_assignment(payload)
+
+    def get_for_student_on(self, student_id: UUID, assigned_on) -> TaskAssignment | None:
+        return self.store.get_task_assignment_for_student_on(student_id, assigned_on)
+
+    def list_for_student(self, student_id: UUID) -> list[TaskAssignment]:
+        return self.store.list_task_assignments_for_student(student_id)
+
+    def list_for_batch_on(self, batch_id: UUID, assigned_on) -> list[TaskAssignment]:
+        return self.store.list_task_assignments_for_batch_on(batch_id, assigned_on)
 
 
 class MemorySubmissionRepository:
@@ -224,6 +247,7 @@ class MemoryUnitOfWork:
         self.projects = MemoryProjectRepository(store)
         self.project_profiles = MemoryProjectProfileRepository(store)
         self.tasks = MemoryTaskRepository(store)
+        self.task_assignments = MemoryTaskAssignmentRepository(store)
         self.submissions = MemorySubmissionRepository(store)
         self.evaluations = MemoryEvaluationRepository(store)
         self.mentor_reviews = MemoryMentorReviewRepository(store)
@@ -350,6 +374,23 @@ class AsyncMemoryTaskRepository:
         return self._inner.list_for_student(student_id)
 
 
+class AsyncMemoryTaskAssignmentRepository:
+    def __init__(self, inner: MemoryTaskAssignmentRepository) -> None:
+        self._inner = inner
+
+    async def create(self, payload: TaskAssignmentCreate) -> TaskAssignment:
+        return self._inner.create(payload)
+
+    async def get_for_student_on(self, student_id: UUID, assigned_on) -> TaskAssignment | None:
+        return self._inner.get_for_student_on(student_id, assigned_on)
+
+    async def list_for_student(self, student_id: UUID) -> list[TaskAssignment]:
+        return self._inner.list_for_student(student_id)
+
+    async def list_for_batch_on(self, batch_id: UUID, assigned_on) -> list[TaskAssignment]:
+        return self._inner.list_for_batch_on(batch_id, assigned_on)
+
+
 class AsyncMemorySubmissionRepository:
     def __init__(self, inner: MemorySubmissionRepository) -> None:
         self._inner = inner
@@ -456,6 +497,7 @@ class AsyncMemoryUnitOfWork:
         self.projects = AsyncMemoryProjectRepository(self._sync_uow.projects)
         self.project_profiles = AsyncMemoryProjectProfileRepository(self._sync_uow.project_profiles)
         self.tasks = AsyncMemoryTaskRepository(self._sync_uow.tasks)
+        self.task_assignments = AsyncMemoryTaskAssignmentRepository(self._sync_uow.task_assignments)
         self.submissions = AsyncMemorySubmissionRepository(self._sync_uow.submissions)
         self.evaluations = AsyncMemoryEvaluationRepository(self._sync_uow.evaluations)
         self.mentor_reviews = AsyncMemoryMentorReviewRepository(self._sync_uow.mentor_reviews)

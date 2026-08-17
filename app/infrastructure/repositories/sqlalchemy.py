@@ -15,9 +15,16 @@ from app.infrastructure.models import (
     StudentProjectProfileModel,
     SubmissionModel,
     SystemEventModel,
+    TaskAssignmentModel,
     UserModel,
 )
-from app.schemas.m7 import StudentProjectProfile, StudentProjectProfileCreate, StudentProjectProfileUpdate
+from app.schemas.m7 import (
+    StudentProjectProfile,
+    StudentProjectProfileCreate,
+    StudentProjectProfileUpdate,
+    TaskAssignment,
+    TaskAssignmentCreate,
+)
 from app.schemas.auth import RefreshTokenCreate, RefreshTokenRecord, User, UserCreate
 from app.schemas.core import (
     Batch,
@@ -241,6 +248,47 @@ class SqlAlchemyTaskRepository(SqlAlchemyRepository):
             )
         )
         return [Task.model_validate(m, from_attributes=True) for m in result.scalars().all()]
+
+
+class SqlAlchemyTaskAssignmentRepository(SqlAlchemyRepository):
+    async def create(self, payload: TaskAssignmentCreate) -> TaskAssignment:
+        model = TaskAssignmentModel(**payload.model_dump())
+        self.session.add(model)
+        await self.session.flush()
+        await self.session.refresh(model)
+        return TaskAssignment.model_validate(model, from_attributes=True)
+
+    async def get_for_student_on(self, student_id: UUID, assigned_on) -> TaskAssignment | None:
+        result = await self.session.execute(
+            select(TaskAssignmentModel).where(
+                TaskAssignmentModel.student_id == student_id,
+                TaskAssignmentModel.assigned_on == assigned_on,
+                TaskAssignmentModel.deleted_at.is_(None),
+            )
+        )
+        model = result.scalar_one_or_none()
+        return TaskAssignment.model_validate(model, from_attributes=True) if model else None
+
+    async def list_for_student(self, student_id: UUID) -> list[TaskAssignment]:
+        result = await self.session.execute(
+            select(TaskAssignmentModel)
+            .where(
+                TaskAssignmentModel.student_id == student_id,
+                TaskAssignmentModel.deleted_at.is_(None),
+            )
+            .order_by(TaskAssignmentModel.assigned_on)
+        )
+        return [TaskAssignment.model_validate(m, from_attributes=True) for m in result.scalars().all()]
+
+    async def list_for_batch_on(self, batch_id: UUID, assigned_on) -> list[TaskAssignment]:
+        result = await self.session.execute(
+            select(TaskAssignmentModel).where(
+                TaskAssignmentModel.batch_id == batch_id,
+                TaskAssignmentModel.assigned_on == assigned_on,
+                TaskAssignmentModel.deleted_at.is_(None),
+            )
+        )
+        return [TaskAssignment.model_validate(m, from_attributes=True) for m in result.scalars().all()]
 
 
 class SqlAlchemySubmissionRepository(SqlAlchemyRepository):
@@ -475,6 +523,7 @@ class SqlAlchemyUnitOfWork:
         self.projects = SqlAlchemyProjectRepository(session)
         self.project_profiles = SqlAlchemyProjectProfileRepository(session)
         self.tasks = SqlAlchemyTaskRepository(session)
+        self.task_assignments = SqlAlchemyTaskAssignmentRepository(session)
         self.submissions = SqlAlchemySubmissionRepository(session)
         self.evaluations = SqlAlchemyEvaluationRepository(session)
         self.mentor_reviews = SqlAlchemyMentorReviewRepository(session)

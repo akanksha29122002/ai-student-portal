@@ -43,6 +43,8 @@ from app.schemas.m7 import (
     SubmissionEvidenceCreate,
     TaskDependency,
     TaskDependencyCreate,
+    TaskAssignment,
+    TaskAssignmentCreate,
     VerificationEvidence,
     VerificationEvidenceCreate,
     VerificationResult,
@@ -72,6 +74,7 @@ class InMemoryStore:
         self.learning_plans: dict[UUID, LearningPlan] = {}
         self.learning_plan_days: dict[UUID, LearningPlanDay] = {}
         self.task_dependencies: dict[UUID, TaskDependency] = {}
+        self.task_assignments: dict[UUID, TaskAssignment] = {}
         self.submission_evidences: dict[UUID, SubmissionEvidence] = {}
         self.verification_results: dict[UUID, VerificationResult] = {}
         self.verification_evidences: dict[UUID, VerificationEvidence] = {}
@@ -159,6 +162,37 @@ class InMemoryStore:
         entity = Task(**payload.model_dump())
         self.tasks[entity.id] = entity
         return entity
+
+    def create_task_assignment(self, payload: TaskAssignmentCreate) -> TaskAssignment:
+        existing = self.get_task_assignment_for_student_on(payload.student_id, payload.assigned_on)
+        if existing:
+            raise ValueError("task assignment already exists for this student/day")
+        entity = TaskAssignment(**payload.model_dump())
+        self.task_assignments[entity.id] = entity
+        return entity
+
+    def get_task_assignment_for_student_on(self, student_id: UUID, assigned_on) -> TaskAssignment | None:
+        return next(
+            (
+                assignment
+                for assignment in self.task_assignments.values()
+                if assignment.student_id == student_id and assignment.assigned_on == assigned_on
+            ),
+            None,
+        )
+
+    def list_task_assignments_for_student(self, student_id: UUID) -> list[TaskAssignment]:
+        return sorted(
+            [assignment for assignment in self.task_assignments.values() if assignment.student_id == student_id],
+            key=lambda assignment: assignment.assigned_on,
+        )
+
+    def list_task_assignments_for_batch_on(self, batch_id: UUID, assigned_on) -> list[TaskAssignment]:
+        return [
+            assignment
+            for assignment in self.task_assignments.values()
+            if assignment.batch_id == batch_id and assignment.assigned_on == assigned_on
+        ]
 
     def get_task(self, task_id: UUID) -> Task | None:
         return self.tasks.get(task_id)

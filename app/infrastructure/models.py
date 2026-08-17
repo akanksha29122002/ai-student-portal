@@ -590,3 +590,25 @@ class StudentProjectProfileModel(Base, TimestampMixin):
     mentor_notes: Mapped[str | None] = mapped_column(Text)
     analysis_version: Mapped[str] = mapped_column(String(80), nullable=False, default="project-profile.v1")
     last_analyzed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class TaskAssignmentModel(Base, TimestampMixin):
+    """One visible daily assignment per student per day."""
+    __tablename__ = "task_assignments"
+    __table_args__ = (UniqueConstraint("student_id", "assigned_on", name="uq_task_assignments_student_day"),)
+
+    id: Mapped[UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    organization_id: Mapped[UUID] = mapped_column(ForeignKey("organizations.id"), index=True, nullable=False)
+    batch_id: Mapped[UUID] = mapped_column(ForeignKey("batches.id"), index=True, nullable=False)
+    student_id: Mapped[UUID] = mapped_column(ForeignKey("students.id"), index=True, nullable=False)
+    task_id: Mapped[UUID] = mapped_column(ForeignKey("daily_tasks.id"), index=True, nullable=False)
+    assigned_on: Mapped[date] = mapped_column(Date, index=True, nullable=False)
+    status: Mapped[str] = mapped_column(String(40), nullable=False, default="assigned")
+    why_this_task: Mapped[str] = mapped_column(Text, nullable=False)
+    instructions: Mapped[str] = mapped_column(Text, nullable=False)
+    expected_deliverables: Mapped[dict] = mapped_column(JSONB, nullable=False, default=list)
+    verification_strategy: Mapped[dict] = mapped_column(JSONB, nullable=False, default=list)
+    difficulty: Mapped[str] = mapped_column(String(40), nullable=False, default="medium")
+    estimated_minutes: Mapped[int] = mapped_column(Integer, nullable=False, default=60)
+    skills_tested: Mapped[dict] = mapped_column(JSONB, nullable=False, default=list)
+    mentor_review_required: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)

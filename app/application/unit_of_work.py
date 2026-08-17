@@ -11,6 +11,7 @@ from app.application.repositories import (
     AsyncStudentRepository,
     AsyncSubmissionRepository,
     AsyncTaskRepository,
+    AsyncTaskAssignmentRepository,
     AsyncUserRepository,
     BatchRepository,
     EvaluationRepository,
@@ -22,6 +23,7 @@ from app.application.repositories import (
     StudentRepository,
     SubmissionRepository,
     TaskRepository,
+    TaskAssignmentRepository,
     UserRepository,
 )
 
@@ -33,6 +35,7 @@ class UnitOfWork(Protocol):
     projects: ProjectRepository
     project_profiles: ProjectProfileRepository
     tasks: TaskRepository
+    task_assignments: TaskAssignmentRepository
     submissions: SubmissionRepository
     evaluations: EvaluationRepository
     mentor_reviews: MentorReviewRepository
@@ -53,6 +56,7 @@ class AsyncUnitOfWork(Protocol):
     projects: AsyncProjectRepository
     project_profiles: AsyncProjectProfileRepository
     tasks: AsyncTaskRepository
+    task_assignments: AsyncTaskAssignmentRepository
     submissions: AsyncSubmissionRepository
     evaluations: AsyncEvaluationRepository
     mentor_reviews: AsyncMentorReviewRepository

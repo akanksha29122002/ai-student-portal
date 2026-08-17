@@ -32,7 +32,7 @@ def test_alembic_revision_graph_is_single_linear_chain():
     revisions = list(script.walk_revisions())
     ordered = list(reversed(revisions))
 
-    assert script.get_heads() == ["0008"]
+    assert script.get_heads() == ["0009"]
     assert [revision.revision for revision in ordered] == [
         "0001",
         "0002",
@@ -42,6 +42,7 @@ def test_alembic_revision_graph_is_single_linear_chain():
         "0006",
         "0007",
         "0008",
+        "0009",
     ]
     assert [revision.down_revision for revision in ordered] == [
         None,
@@ -52,6 +53,7 @@ def test_alembic_revision_graph_is_single_linear_chain():
         "0005",
         "0006",
         "0007",
+        "0008",
     ]
 
 

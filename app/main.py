@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.agents_router import router as agents_router
 from app.api.auth_router import router as auth_router
+from app.api.automation_router import router as automation_router
 from app.api.errors import register_exception_handlers
 from app.api.evaluation_router import router as evaluation_router
 from app.api.frontend_router import router as frontend_router
@@ -74,6 +75,7 @@ def create_app() -> FastAPI:
     app.add_middleware(RequestContextMiddleware)
     register_exception_handlers(app)
     app.include_router(auth_router)
+    app.include_router(automation_router)
     app.include_router(router)
     app.include_router(frontend_router)
     app.include_router(github_router)

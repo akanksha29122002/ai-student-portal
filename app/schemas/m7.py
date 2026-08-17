@@ -72,6 +72,32 @@ class StudentProjectProfile(Entity, StudentProjectProfileCreate):
 
 
 # ---------------------------------------------------------------------------
+# Daily Task Assignment
+# ---------------------------------------------------------------------------
+
+
+class TaskAssignmentCreate(ApiModel):
+    organization_id: UUID
+    batch_id: UUID
+    student_id: UUID
+    task_id: UUID
+    assigned_on: date
+    status: str = Field(default="assigned", max_length=40)
+    why_this_task: str = Field(min_length=1, max_length=2000)
+    instructions: str = Field(min_length=1, max_length=4000)
+    expected_deliverables: list[str] = Field(default_factory=list)
+    verification_strategy: list[str] = Field(default_factory=list)
+    difficulty: str = Field(default="medium", max_length=40)
+    estimated_minutes: int = Field(default=60, ge=5, le=480)
+    skills_tested: list[str] = Field(default_factory=list)
+    mentor_review_required: bool = False
+
+
+class TaskAssignment(Entity, TaskAssignmentCreate):
+    pass
+
+
+# ---------------------------------------------------------------------------
 # Student Profile Analysis
 # ---------------------------------------------------------------------------
 
