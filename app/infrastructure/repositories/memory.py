@@ -22,6 +22,7 @@ from app.schemas.core import (
     Task,
     TaskCreate,
 )
+from app.schemas.m7 import StudentProjectProfile, StudentProjectProfileCreate, StudentProjectProfileUpdate
 from app.services.store import InMemoryStore
 
 
@@ -88,6 +89,20 @@ class MemoryProjectRepository:
 
     def get(self, project_id: UUID) -> Project | None:
         return self.store.get_project(project_id)
+
+
+class MemoryProjectProfileRepository:
+    def __init__(self, store: InMemoryStore) -> None:
+        self.store = store
+
+    def create(self, payload: StudentProjectProfileCreate) -> StudentProjectProfile:
+        return self.store.create_student_project_profile(payload)
+
+    def get_by_student(self, student_id: UUID) -> StudentProjectProfile | None:
+        return self.store.get_student_project_profile(student_id)
+
+    def update(self, student_id: UUID, payload: StudentProjectProfileUpdate) -> StudentProjectProfile | None:
+        return self.store.update_student_project_profile(student_id, payload)
 
 
 class MemoryTaskRepository:
@@ -207,6 +222,7 @@ class MemoryUnitOfWork:
         self.batches = MemoryBatchRepository(store)
         self.students = MemoryStudentRepository(store)
         self.projects = MemoryProjectRepository(store)
+        self.project_profiles = MemoryProjectProfileRepository(store)
         self.tasks = MemoryTaskRepository(store)
         self.submissions = MemorySubmissionRepository(store)
         self.evaluations = MemoryEvaluationRepository(store)
@@ -301,6 +317,20 @@ class AsyncMemoryProjectRepository:
 
     async def get(self, project_id: UUID) -> Project | None:
         return self._inner.get(project_id)
+
+
+class AsyncMemoryProjectProfileRepository:
+    def __init__(self, inner: MemoryProjectProfileRepository) -> None:
+        self._inner = inner
+
+    async def create(self, payload: StudentProjectProfileCreate) -> StudentProjectProfile:
+        return self._inner.create(payload)
+
+    async def get_by_student(self, student_id: UUID) -> StudentProjectProfile | None:
+        return self._inner.get_by_student(student_id)
+
+    async def update(self, student_id: UUID, payload: StudentProjectProfileUpdate) -> StudentProjectProfile | None:
+        return self._inner.update(student_id, payload)
 
 
 class AsyncMemoryTaskRepository:
@@ -424,6 +454,7 @@ class AsyncMemoryUnitOfWork:
         self.batches = AsyncMemoryBatchRepository(self._sync_uow.batches)
         self.students = AsyncMemoryStudentRepository(self._sync_uow.students)
         self.projects = AsyncMemoryProjectRepository(self._sync_uow.projects)
+        self.project_profiles = AsyncMemoryProjectProfileRepository(self._sync_uow.project_profiles)
         self.tasks = AsyncMemoryTaskRepository(self._sync_uow.tasks)
         self.submissions = AsyncMemorySubmissionRepository(self._sync_uow.submissions)
         self.evaluations = AsyncMemoryEvaluationRepository(self._sync_uow.evaluations)

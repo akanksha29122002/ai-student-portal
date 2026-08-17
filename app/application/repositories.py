@@ -22,6 +22,7 @@ from app.schemas.core import (
     Task,
     TaskCreate,
 )
+from app.schemas.m7 import StudentProjectProfile, StudentProjectProfileCreate, StudentProjectProfileUpdate
 
 
 class OrganizationRepository(Protocol):
@@ -46,6 +47,12 @@ class StudentRepository(Protocol):
 class ProjectRepository(Protocol):
     def create(self, payload: ProjectCreate) -> Project: ...
     def get(self, project_id: UUID) -> Project | None: ...
+
+
+class ProjectProfileRepository(Protocol):
+    def create(self, payload: StudentProjectProfileCreate) -> StudentProjectProfile: ...
+    def get_by_student(self, student_id: UUID) -> StudentProjectProfile | None: ...
+    def update(self, student_id: UUID, payload: StudentProjectProfileUpdate) -> StudentProjectProfile | None: ...
 
 
 class TaskRepository(Protocol):
@@ -103,6 +110,12 @@ class AsyncStudentRepository(Protocol):
 class AsyncProjectRepository(Protocol):
     async def create(self, payload: ProjectCreate) -> Project: ...
     async def get(self, project_id: UUID) -> Project | None: ...
+
+
+class AsyncProjectProfileRepository(Protocol):
+    async def create(self, payload: StudentProjectProfileCreate) -> StudentProjectProfile: ...
+    async def get_by_student(self, student_id: UUID) -> StudentProjectProfile | None: ...
+    async def update(self, student_id: UUID, payload: StudentProjectProfileUpdate) -> StudentProjectProfile | None: ...
 
 
 class AsyncTaskRepository(Protocol):

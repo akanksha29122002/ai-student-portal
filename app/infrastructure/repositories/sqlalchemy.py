@@ -12,10 +12,12 @@ from app.infrastructure.models import (
     ProjectModel,
     RefreshTokenModel,
     StudentModel,
+    StudentProjectProfileModel,
     SubmissionModel,
     SystemEventModel,
     UserModel,
 )
+from app.schemas.m7 import StudentProjectProfile, StudentProjectProfileCreate, StudentProjectProfileUpdate
 from app.schemas.auth import RefreshTokenCreate, RefreshTokenRecord, User, UserCreate
 from app.schemas.core import (
     Batch,
@@ -167,6 +169,41 @@ class SqlAlchemyProjectRepository(SqlAlchemyRepository):
         )
         model = result.scalar_one_or_none()
         return Project.model_validate(model, from_attributes=True) if model else None
+
+
+class SqlAlchemyProjectProfileRepository(SqlAlchemyRepository):
+    async def create(self, payload: StudentProjectProfileCreate) -> StudentProjectProfile:
+        model = StudentProjectProfileModel(**payload.model_dump())
+        self.session.add(model)
+        await self.session.flush()
+        await self.session.refresh(model)
+        return StudentProjectProfile.model_validate(model, from_attributes=True)
+
+    async def get_by_student(self, student_id: UUID) -> StudentProjectProfile | None:
+        result = await self.session.execute(
+            select(StudentProjectProfileModel).where(
+                StudentProjectProfileModel.student_id == student_id,
+                StudentProjectProfileModel.deleted_at.is_(None),
+            )
+        )
+        model = result.scalar_one_or_none()
+        return StudentProjectProfile.model_validate(model, from_attributes=True) if model else None
+
+    async def update(self, student_id: UUID, payload: StudentProjectProfileUpdate) -> StudentProjectProfile | None:
+        existing = await self.get_by_student(student_id)
+        if existing is None:
+            return None
+        updates = payload.model_dump(exclude_unset=True)
+        if not updates:
+            return existing
+        updates["updated_at"] = datetime.now(UTC)
+        await self.session.execute(
+            sa_update(StudentProjectProfileModel)
+            .where(StudentProjectProfileModel.id == existing.id)
+            .values(**updates)
+        )
+        await self.session.flush()
+        return await self.get_by_student(student_id)
 
 
 class SqlAlchemyTaskRepository(SqlAlchemyRepository):
@@ -436,6 +473,7 @@ class SqlAlchemyUnitOfWork:
         self.batches = SqlAlchemyBatchRepository(session)
         self.students = SqlAlchemyStudentRepository(session)
         self.projects = SqlAlchemyProjectRepository(session)
+        self.project_profiles = SqlAlchemyProjectProfileRepository(session)
         self.tasks = SqlAlchemyTaskRepository(session)
         self.submissions = SqlAlchemySubmissionRepository(session)
         self.evaluations = SqlAlchemyEvaluationRepository(session)

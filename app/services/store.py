@@ -36,6 +36,9 @@ from app.schemas.m7 import (
     StudentProfileAnalysisCreate,
     StudentProgress,
     StudentProgressCreate,
+    StudentProjectProfile,
+    StudentProjectProfileCreate,
+    StudentProjectProfileUpdate,
     SubmissionEvidence,
     SubmissionEvidenceCreate,
     TaskDependency,
@@ -73,6 +76,7 @@ class InMemoryStore:
         self.verification_results: dict[UUID, VerificationResult] = {}
         self.verification_evidences: dict[UUID, VerificationEvidence] = {}
         self.student_progress: dict[UUID, StudentProgress] = {}
+        self.student_project_profiles: dict[UUID, StudentProjectProfile] = {}
         self.daily_automation_runs: dict[UUID, DailyAutomationRun] = {}
         self.ai_interaction_logs: list[AIInteractionLog] = []
 
@@ -118,6 +122,35 @@ class InMemoryStore:
         entity = Project(**data)
         self.projects[entity.id] = entity
         return entity
+
+    def create_student_project_profile(self, payload: StudentProjectProfileCreate) -> StudentProjectProfile:
+        existing = self.get_student_project_profile(payload.student_id)
+        if existing:
+            raise ValueError("student project profile already exists")
+        entity = StudentProjectProfile(**payload.model_dump())
+        self.student_project_profiles[entity.id] = entity
+        return entity
+
+    def get_student_project_profile(self, student_id: UUID) -> StudentProjectProfile | None:
+        return next(
+            (profile for profile in self.student_project_profiles.values() if profile.student_id == student_id),
+            None,
+        )
+
+    def update_student_project_profile(
+        self,
+        student_id: UUID,
+        payload: StudentProjectProfileUpdate,
+    ) -> StudentProjectProfile | None:
+        existing = self.get_student_project_profile(student_id)
+        if existing is None:
+            return None
+        updates = payload.model_dump(exclude_unset=True)
+        if not updates:
+            return existing
+        updated = existing.model_copy(update={**updates, "updated_at": datetime.now(UTC)})
+        self.student_project_profiles[existing.id] = updated
+        return updated
 
     def get_project(self, project_id: UUID) -> Project | None:
         return self.projects.get(project_id)

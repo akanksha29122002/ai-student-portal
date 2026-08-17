@@ -7,6 +7,7 @@ from app.application.repositories import (
     AsyncMentorReviewRepository,
     AsyncOrganizationRepository,
     AsyncProjectRepository,
+    AsyncProjectProfileRepository,
     AsyncStudentRepository,
     AsyncSubmissionRepository,
     AsyncTaskRepository,
@@ -17,6 +18,7 @@ from app.application.repositories import (
     MentorReviewRepository,
     OrganizationRepository,
     ProjectRepository,
+    ProjectProfileRepository,
     StudentRepository,
     SubmissionRepository,
     TaskRepository,
@@ -29,6 +31,7 @@ class UnitOfWork(Protocol):
     batches: BatchRepository
     students: StudentRepository
     projects: ProjectRepository
+    project_profiles: ProjectProfileRepository
     tasks: TaskRepository
     submissions: SubmissionRepository
     evaluations: EvaluationRepository
@@ -48,6 +51,7 @@ class AsyncUnitOfWork(Protocol):
     batches: AsyncBatchRepository
     students: AsyncStudentRepository
     projects: AsyncProjectRepository
+    project_profiles: AsyncProjectProfileRepository
     tasks: AsyncTaskRepository
     submissions: AsyncSubmissionRepository
     evaluations: AsyncEvaluationRepository
@@ -60,4 +64,3 @@ class AsyncUnitOfWork(Protocol):
     async def commit(self) -> None: ...
     async def rollback(self) -> None: ...
     async def begin_nested(self): ...
-

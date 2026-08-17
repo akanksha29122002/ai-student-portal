@@ -21,6 +21,57 @@ from app.schemas.base import ApiModel, Entity
 
 
 # ---------------------------------------------------------------------------
+# Student Project Profile
+# ---------------------------------------------------------------------------
+
+
+class StudentProjectProfileCreate(ApiModel):
+    student_id: UUID
+    organization_id: UUID
+    project_id: UUID
+    github_repository: str = Field(min_length=5, max_length=500)
+    deployed_url: str | None = Field(default=None, max_length=500)
+    project_title: str = Field(min_length=2, max_length=160)
+    project_description: str = Field(default="", max_length=4000)
+    tech_stack: list[str] = Field(default_factory=list)
+    languages: list[str] = Field(default_factory=list)
+    frameworks: list[str] = Field(default_factory=list)
+    database: str | None = Field(default=None, max_length=120)
+    architecture_summary: str | None = Field(default=None, max_length=4000)
+    current_strengths: list[str] = Field(default_factory=list)
+    current_weaknesses: list[str] = Field(default_factory=list)
+    skill_gaps: list[str] = Field(default_factory=list)
+    current_level: str = Field(default="unknown", max_length=40)
+    mentor_notes: str | None = Field(default=None, max_length=4000)
+    analysis_version: str = Field(default="project-profile.v1", max_length=80)
+    last_analyzed_at: datetime | None = None
+
+
+class StudentProjectProfileUpdate(ApiModel):
+    project_id: UUID | None = None
+    github_repository: str | None = Field(default=None, min_length=5, max_length=500)
+    deployed_url: str | None = Field(default=None, max_length=500)
+    project_title: str | None = Field(default=None, min_length=2, max_length=160)
+    project_description: str | None = Field(default=None, max_length=4000)
+    tech_stack: list[str] | None = None
+    languages: list[str] | None = None
+    frameworks: list[str] | None = None
+    database: str | None = Field(default=None, max_length=120)
+    architecture_summary: str | None = Field(default=None, max_length=4000)
+    current_strengths: list[str] | None = None
+    current_weaknesses: list[str] | None = None
+    skill_gaps: list[str] | None = None
+    current_level: str | None = Field(default=None, max_length=40)
+    mentor_notes: str | None = Field(default=None, max_length=4000)
+    analysis_version: str | None = Field(default=None, max_length=80)
+    last_analyzed_at: datetime | None = None
+
+
+class StudentProjectProfile(Entity, StudentProjectProfileCreate):
+    pass
+
+
+# ---------------------------------------------------------------------------
 # Student Profile Analysis
 # ---------------------------------------------------------------------------
 

@@ -564,3 +564,29 @@ class AIInteractionLogModel(Base):
         DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False, index=True
     )
 
+
+class StudentProjectProfileModel(Base, TimestampMixin):
+    """Durable project-defense profile for autonomous task generation."""
+    __tablename__ = "student_project_profiles"
+    __table_args__ = (UniqueConstraint("student_id", name="uq_student_project_profiles_student_id"),)
+
+    id: Mapped[UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    student_id: Mapped[UUID] = mapped_column(ForeignKey("students.id"), index=True, nullable=False)
+    organization_id: Mapped[UUID] = mapped_column(ForeignKey("organizations.id"), index=True, nullable=False)
+    project_id: Mapped[UUID] = mapped_column(ForeignKey("projects.id"), index=True, nullable=False)
+    github_repository: Mapped[str] = mapped_column(String(500), nullable=False)
+    deployed_url: Mapped[str | None] = mapped_column(String(500))
+    project_title: Mapped[str] = mapped_column(String(160), nullable=False)
+    project_description: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    tech_stack: Mapped[dict] = mapped_column(JSONB, nullable=False, default=list)
+    languages: Mapped[dict] = mapped_column(JSONB, nullable=False, default=list)
+    frameworks: Mapped[dict] = mapped_column(JSONB, nullable=False, default=list)
+    database: Mapped[str | None] = mapped_column(String(120))
+    architecture_summary: Mapped[str | None] = mapped_column(Text)
+    current_strengths: Mapped[dict] = mapped_column(JSONB, nullable=False, default=list)
+    current_weaknesses: Mapped[dict] = mapped_column(JSONB, nullable=False, default=list)
+    skill_gaps: Mapped[dict] = mapped_column(JSONB, nullable=False, default=list)
+    current_level: Mapped[str] = mapped_column(String(40), nullable=False, default="unknown")
+    mentor_notes: Mapped[str | None] = mapped_column(Text)
+    analysis_version: Mapped[str] = mapped_column(String(80), nullable=False, default="project-profile.v1")
+    last_analyzed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
