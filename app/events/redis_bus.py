@@ -78,10 +78,13 @@ class RedisStreamEventBus:
         await self._client.aclose()
 
 
-def make_redis_bus() -> RedisStreamEventBus:
+def make_redis_bus(redis_url: str | None = None) -> RedisStreamEventBus:
     """Factory — creates a RedisStreamEventBus using settings.redis_url."""
     from app.core.config import settings
-    client = aioredis.from_url(settings.redis_url, decode_responses=False)
+    url = (redis_url or settings.redis_url or "").strip()
+    if not url:
+        raise InfrastructureException("PROJECT_DEFENSE_REDIS_URL is not configured")
+    client = aioredis.from_url(url, decode_responses=False)
     return RedisStreamEventBus(client)
 
 

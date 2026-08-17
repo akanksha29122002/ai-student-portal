@@ -68,8 +68,13 @@ async def _consume_once(stream_key: str, count: int = 50) -> int:
     from app.events.redis_bus import deserialize_event
     from app.events.registry import make_default_registry
 
+    redis_url = (getattr(settings, "redis_url", "") or "").strip()
+    if not redis_url:
+        logger.warning("Redis URL is not configured; stream consumer is a no-op for %s", stream_key)
+        return 0
+
     registry = make_default_registry()
-    client = aioredis.from_url(settings.redis_url, decode_responses=False)
+    client = aioredis.from_url(redis_url, decode_responses=False)
 
     try:
         await _ensure_group(client, stream_key)

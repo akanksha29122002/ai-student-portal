@@ -20,10 +20,14 @@ def _build() -> "_Celery | None":  # type: ignore[name-defined]
         return None
     from app.core.config import settings
 
+    redis_url = (getattr(settings, "redis_url", "") or "").strip()
+    if not redis_url:
+        return None
+
     app = _Celery("project_defense")
     app.conf.update(
-        broker_url=settings.redis_url,
-        result_backend=settings.redis_url,
+        broker_url=redis_url,
+        result_backend=redis_url,
         task_serializer="json",
         accept_content=["json"],
         result_serializer="json",

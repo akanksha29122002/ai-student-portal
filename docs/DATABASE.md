@@ -22,6 +22,7 @@ PROJECT_DEFENSE_DB_POOL_SIZE=5
 PROJECT_DEFENSE_DB_MAX_OVERFLOW=5
 PROJECT_DEFENSE_FRONTEND_URL=https://your-vercel-app.vercel.app
 PROJECT_DEFENSE_CORS_ORIGINS=https://your-vercel-app.vercel.app
+PROJECT_DEFENSE_REDIS_REQUIRED=false
 ```
 
 Render now runs:
@@ -31,6 +32,11 @@ alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT
 ```
 
 That applies migrations before the API starts.
+
+Redis is not required for the current production pilot. Leave
+`PROJECT_DEFENSE_REDIS_URL` unset unless you have provisioned a real Redis
+service. Never point Render at `redis://localhost:6379`; that will fail because
+Redis is not running inside the web service container.
 
 ## Vercel Environment
 

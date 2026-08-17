@@ -1,4 +1,4 @@
-from app.events.bus import EventBus, EventDispatchingUnitOfWork, InMemoryEventBus
+from app.events.bus import EventBus, EventDispatchingUnitOfWork, InMemoryEventBus, OptionalEventBus
 from app.events.registry import HandlerRegistry, make_default_registry
 
 __all__ = [
@@ -6,5 +6,6 @@ __all__ = [
     "EventDispatchingUnitOfWork",
     "HandlerRegistry",
     "InMemoryEventBus",
+    "OptionalEventBus",
     "make_default_registry",
 ]

@@ -8,7 +8,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from app.application.async_daily_loop_service import AsyncDailyLoopService
 from app.core.config import Environment, settings
 from app.domain.enums import UserRole
-from app.events.bus import EventDispatchingUnitOfWork, InMemoryEventBus
+from app.events.bus import EventDispatchingUnitOfWork, InMemoryEventBus, OptionalEventBus
 from app.events.registry import make_default_registry
 from app.infrastructure.database import SessionLocal
 from app.infrastructure.repositories.memory import AsyncMemoryUnitOfWork
@@ -71,12 +71,29 @@ def _get_bus():
     falls back to the module-level InMemoryEventBus otherwise.
     Demo mode always uses InMemoryEventBus — no Redis required.
     """
-    if settings.environment == Environment.PRODUCTION and not _demo_mode:
+    redis_url = (getattr(settings, "redis_url", "") or "").strip()
+    redis_required = bool(getattr(settings, "redis_required", False))
+
+    if redis_required and not redis_url:
+        from app.shared.exceptions import InfrastructureException
+        raise InfrastructureException(
+            "PROJECT_DEFENSE_REDIS_REQUIRED=true but PROJECT_DEFENSE_REDIS_URL is not configured"
+        )
+
+    if redis_url and not _demo_mode:
         try:
             from app.events.redis_bus import make_redis_bus
-            return make_redis_bus()
-        except Exception:
-            pass
+            return OptionalEventBus(make_redis_bus(redis_url), required=redis_required)
+        except Exception as exc:
+            import logging
+            logging.getLogger("project_defense.events.bus").warning(
+                "Redis event bus unavailable; using InMemoryEventBus",
+                extra={"redis_required": redis_required},
+                exc_info=True,
+            )
+            if redis_required:
+                from app.shared.exceptions import InfrastructureException
+                raise InfrastructureException("Redis event bus is required but unavailable") from exc
     return _in_memory_bus
 
 

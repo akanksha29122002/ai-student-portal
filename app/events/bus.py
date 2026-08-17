@@ -23,6 +23,25 @@ class EventBus(Protocol):
     async def publish(self, event: DomainEvent) -> None: ...
 
 
+class OptionalEventBus:
+    """Fail-open wrapper for optional event transports such as Redis."""
+
+    def __init__(self, inner: EventBus, *, required: bool = False) -> None:
+        self._inner = inner
+        self._required = required
+
+    async def publish(self, event: DomainEvent) -> None:
+        try:
+            await self._inner.publish(event)
+        except Exception:
+            logger.exception(
+                "Event publish failed after transaction commit",
+                extra={"event_type": event.event_type, "event_id": str(event.event_id)},
+            )
+            if self._required:
+                raise
+
+
 class InMemoryEventBus:
     """In-process event bus for development and testing.
 

@@ -60,6 +60,9 @@ vercel --prod --yes
 | `PROJECT_DEFENSE_LOG_LEVEL` | `INFO` |
 | `PROJECT_DEFENSE_DB_POOL_SIZE` | `5` |
 | `PROJECT_DEFENSE_DB_MAX_OVERFLOW` | `5` |
+| `PROJECT_DEFENSE_REDIS_REQUIRED` | `false` |
+
+Redis is optional for the current production pilot. Do not set `PROJECT_DEFENSE_REDIS_URL` until a real Redis instance is provisioned. If a Redis URL is configured and Redis is unavailable, the API logs the event-delivery failure and continues unless `PROJECT_DEFENSE_REDIS_REQUIRED=true`.
 
 ### First deploy notes
 
@@ -129,3 +132,6 @@ Free tier spins down after 15 min idle. First request takes ~30s. Upgrade to Sta
 
 **Frontend shows "API Error":**  
 Confirm `NEXT_PUBLIC_API_URL` on Vercel matches the Render service URL exactly.
+
+**POST /students fails with localhost Redis connection refused:**  
+Remove any accidental `PROJECT_DEFENSE_REDIS_URL=redis://localhost:6379/...` setting and keep `PROJECT_DEFENSE_REDIS_REQUIRED=false` for the pilot. Redis should not point at localhost on Render.

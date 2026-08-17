@@ -32,7 +32,8 @@ if SettingsConfigDict is not None:
         db_pool_timeout: int = Field(default=30, ge=5)
 
         # Redis / workers
-        redis_url: str = "redis://localhost:6379/0"
+        redis_url: str = ""
+        redis_required: bool = Field(default=False)
         worker_concurrency: int = Field(default=4, ge=1)
 
         # Security
@@ -97,7 +98,8 @@ else:
             self.db_pool_size = int(os.getenv("PROJECT_DEFENSE_DB_POOL_SIZE", "10"))
             self.db_max_overflow = int(os.getenv("PROJECT_DEFENSE_DB_MAX_OVERFLOW", "20"))
             self.db_pool_timeout = int(os.getenv("PROJECT_DEFENSE_DB_POOL_TIMEOUT", "30"))
-            self.redis_url = os.getenv("PROJECT_DEFENSE_REDIS_URL", "redis://localhost:6379/0")
+            self.redis_url = os.getenv("PROJECT_DEFENSE_REDIS_URL", "")
+            self.redis_required = os.getenv("PROJECT_DEFENSE_REDIS_REQUIRED", "false").lower() == "true"
             self.worker_concurrency = int(os.getenv("PROJECT_DEFENSE_WORKER_CONCURRENCY", "4"))
             self.secret_key = os.getenv("PROJECT_DEFENSE_SECRET_KEY", "change-me-before-production-use")
             self.jwt_algorithm = os.getenv("PROJECT_DEFENSE_JWT_ALGORITHM", "HS256")
