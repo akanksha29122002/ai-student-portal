@@ -1,7 +1,7 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Query, status
 
 from app.api.dependencies import get_async_service, get_current_user
 from app.application.async_daily_loop_service import AsyncDailyLoopService
@@ -36,6 +36,22 @@ async def create_organization(payload: OrganizationCreate, service: _Service, cu
     if not current_user.can(UserRole.SUPER_ADMIN, UserRole.ORGANIZATION_ADMIN):
         raise UnauthorizedException("Only organization admins can create organizations")
     return await service.create_organization(payload)
+
+
+@router.get("/organizations", tags=["organizations"])
+async def list_organizations(
+    service: _Service,
+    current_user: _CurrentUser,
+    slug: str | None = Query(default=None),
+):
+    if not current_user.can(UserRole.SUPER_ADMIN, UserRole.ORGANIZATION_ADMIN, UserRole.PROGRAM_MANAGER, UserRole.MENTOR):
+        raise UnauthorizedException("Insufficient permissions to list organizations")
+    if slug is not None:
+        return [await service.get_organization_by_slug(slug)]
+    organizations = await service.list_organizations()
+    if current_user.organization_id is not None and not current_user.can(UserRole.SUPER_ADMIN):
+        organizations = [org for org in organizations if org.id == current_user.organization_id]
+    return organizations
 
 
 @router.post("/batches", status_code=status.HTTP_201_CREATED, tags=["programs"])

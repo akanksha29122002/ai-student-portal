@@ -38,10 +38,11 @@ from app.schemas.core import (
 from app.shared.exceptions import InfrastructureException
 
 try:
-    from sqlalchemy import select, update as sa_update
+    from sqlalchemy import func, select, update as sa_update
     from sqlalchemy.ext.asyncio import AsyncSession
 except ModuleNotFoundError:
     AsyncSession = None
+    func = None
     select = None
     sa_update = None
 
@@ -61,6 +62,22 @@ class SqlAlchemyOrganizationRepository(SqlAlchemyRepository):
         await self.session.refresh(model)
         return Organization.model_validate(model, from_attributes=True)
 
+    async def get_by_slug(self, slug: str) -> Organization | None:
+        result = await self.session.execute(
+            select(OrganizationModel).where(
+                OrganizationModel.slug == slug.lower(),
+                OrganizationModel.deleted_at.is_(None),
+            )
+        )
+        model = result.scalar_one_or_none()
+        return Organization.model_validate(model, from_attributes=True) if model else None
+
+    async def list(self) -> list[Organization]:
+        result = await self.session.execute(
+            select(OrganizationModel).where(OrganizationModel.deleted_at.is_(None))
+        )
+        return [Organization.model_validate(m, from_attributes=True) for m in result.scalars().all()]
+
 
 class SqlAlchemyBatchRepository(SqlAlchemyRepository):
     async def create(self, payload: BatchCreate) -> Batch:
@@ -69,6 +86,17 @@ class SqlAlchemyBatchRepository(SqlAlchemyRepository):
         await self.session.flush()
         await self.session.refresh(model)
         return Batch.model_validate(model, from_attributes=True)
+
+    async def get_by_name(self, organization_id: UUID, name: str) -> Batch | None:
+        result = await self.session.execute(
+            select(BatchModel).where(
+                BatchModel.organization_id == organization_id,
+                func.lower(BatchModel.name) == name.lower(),
+                BatchModel.deleted_at.is_(None),
+            )
+        )
+        model = result.scalar_one_or_none()
+        return Batch.model_validate(model, from_attributes=True) if model else None
 
     async def list_for_org(self, org_id: UUID) -> list[Batch]:
         result = await self.session.execute(
@@ -100,7 +128,7 @@ class SqlAlchemyStudentRepository(SqlAlchemyRepository):
 
     async def get_by_email(self, email: str, organization_id: UUID | None = None) -> Student | None:
         query = select(StudentModel).where(
-            StudentModel.email == email.lower(),
+            func.lower(StudentModel.email) == email.lower(),
             StudentModel.deleted_at.is_(None),
         )
         if organization_id is not None:

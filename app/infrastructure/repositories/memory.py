@@ -32,6 +32,12 @@ class MemoryOrganizationRepository:
     def create(self, payload: OrganizationCreate) -> Organization:
         return self.store.create_organization(payload)
 
+    def get_by_slug(self, slug: str) -> Organization | None:
+        return self.store.get_organization_by_slug(slug)
+
+    def list(self) -> list[Organization]:
+        return self.store.list_organizations()
+
 
 class MemoryBatchRepository:
     def __init__(self, store: InMemoryStore) -> None:
@@ -39,6 +45,9 @@ class MemoryBatchRepository:
 
     def create(self, payload: BatchCreate) -> Batch:
         return self.store.create_batch(payload)
+
+    def get_by_name(self, organization_id: UUID, name: str) -> Batch | None:
+        return self.store.get_batch_by_name(organization_id, name)
 
     def list_for_org(self, org_id: UUID) -> list[Batch]:
         return self.store.list_batches_for_org(org_id)
@@ -245,6 +254,12 @@ class AsyncMemoryOrganizationRepository:
     async def create(self, payload: OrganizationCreate) -> Organization:
         return self._inner.create(payload)
 
+    async def get_by_slug(self, slug: str) -> Organization | None:
+        return self._inner.get_by_slug(slug)
+
+    async def list(self) -> list[Organization]:
+        return self._inner.list()
+
 
 class AsyncMemoryBatchRepository:
     def __init__(self, inner: MemoryBatchRepository) -> None:
@@ -252,6 +267,9 @@ class AsyncMemoryBatchRepository:
 
     async def create(self, payload: BatchCreate) -> Batch:
         return self._inner.create(payload)
+
+    async def get_by_name(self, organization_id: UUID, name: str) -> Batch | None:
+        return self._inner.get_by_name(organization_id, name)
 
     async def list_for_org(self, org_id: UUID) -> list[Batch]:
         return self._inner.list_for_org(org_id)

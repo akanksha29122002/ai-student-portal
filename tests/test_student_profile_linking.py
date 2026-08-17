@@ -101,6 +101,102 @@ def test_student_profile_persists_across_new_repository_session():
     assert str(student.id) == student_id
 
 
+def test_bootstrap_records_can_be_reused_through_api():
+    client, _ = _make_client()
+    org, batch, student_response = _create_org_batch_student(
+        client,
+        "reuse@example.com",
+        "Reuse Student",
+    )
+
+    organizations = client.get("/organizations", params={"slug": org["slug"]})
+    batches = client.get("/batches", params={"org_id": org["id"]})
+    students = client.get("/students", params={"org_id": org["id"]})
+
+    assert student_response.status_code == 201
+    assert organizations.status_code == 200
+    assert organizations.json()[0]["id"] == org["id"]
+    assert batches.status_code == 200
+    assert [item["id"] for item in batches.json()] == [batch["id"]]
+    assert students.status_code == 200
+    assert [item["id"] for item in students.json()] == [student_response.json()["id"]]
+
+
+def test_duplicate_organization_slug_returns_409():
+    client, _ = _make_client()
+    payload = {"name": "Project Defense Pilot", "slug": f"project-defense-{uuid4().hex[:8]}"}
+
+    first = client.post("/organizations", json=payload)
+    second = client.post("/organizations", json=payload)
+
+    assert first.status_code == 201
+    assert second.status_code == 409
+
+
+def test_duplicate_batch_name_in_same_organization_returns_409():
+    client, _ = _make_client()
+    org = client.post(
+        "/organizations",
+        json={"name": "Project Defense Pilot", "slug": f"project-defense-{uuid4().hex[:8]}"},
+    ).json()
+    payload = {
+        "organization_id": org["id"],
+        "name": "Project Defense Pilot",
+        "starts_on": str(date(2026, 8, 1)),
+        "ends_on": str(date(2026, 12, 31)),
+    }
+
+    first = client.post("/batches", json=payload)
+    second = client.post("/batches", json=payload)
+
+    assert first.status_code == 201
+    assert second.status_code == 409
+
+
+def test_student_cannot_create_bootstrap_records_when_auth_is_required(monkeypatch):
+    from app.core.config import settings
+
+    client, _ = _make_client()
+    login = client.post(
+        "/auth/register",
+        json={"email": "student-only@example.com", "password": "securepass", "full_name": "Student Only"},
+    ).json()
+    headers = {"Authorization": f"Bearer {login['access_token']}"}
+
+    monkeypatch.setattr(settings, "dev_auth_bypass", False)
+
+    org = client.post(
+        "/organizations",
+        json={"name": "Blocked Org", "slug": f"blocked-{uuid4().hex[:8]}"},
+        headers=headers,
+    )
+    batch = client.post(
+        "/batches",
+        json={
+            "organization_id": str(uuid4()),
+            "name": "Blocked Batch",
+            "starts_on": str(date(2026, 8, 1)),
+            "ends_on": str(date(2026, 12, 31)),
+        },
+        headers=headers,
+    )
+    student = client.post(
+        "/students",
+        json={
+            "organization_id": str(uuid4()),
+            "batch_id": str(uuid4()),
+            "full_name": "Blocked Student",
+            "email": "blocked@example.com",
+            "track": "track_a",
+        },
+        headers=headers,
+    )
+
+    assert org.status_code == 401
+    assert batch.status_code == 401
+    assert student.status_code == 401
+
+
 def test_missing_student_profile_returns_404():
     client, _ = _make_client()
     login = client.post(

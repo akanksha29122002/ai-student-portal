@@ -40,10 +40,25 @@ class AsyncDailyLoopService:
 
     async def create_organization(self, payload: OrganizationCreate):
         async with self.uow:
+            existing = await self.uow.organizations.get_by_slug(payload.slug)
+            if existing is not None:
+                raise ConflictException(f"Organization slug '{payload.slug}' already exists")
             return await self.uow.organizations.create(payload)
+
+    async def get_organization_by_slug(self, slug: str):
+        organization = await self.uow.organizations.get_by_slug(slug)
+        if organization is None:
+            raise NotFoundException("Organization not found")
+        return organization
+
+    async def list_organizations(self):
+        return await self.uow.organizations.list()
 
     async def create_batch(self, payload: BatchCreate):
         async with self.uow:
+            existing = await self.uow.batches.get_by_name(payload.organization_id, payload.name)
+            if existing is not None:
+                raise ConflictException(f"Batch '{payload.name}' already exists in this organization")
             return await self.uow.batches.create(payload)
 
     async def list_batches_for_org(self, org_id: UUID):

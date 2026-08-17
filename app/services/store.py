@@ -81,10 +81,28 @@ class InMemoryStore:
         self.organizations[entity.id] = entity
         return entity
 
+    def get_organization_by_slug(self, slug: str) -> Organization | None:
+        slug_lower = slug.lower()
+        return next((o for o in self.organizations.values() if o.slug.lower() == slug_lower), None)
+
+    def list_organizations(self) -> list[Organization]:
+        return list(self.organizations.values())
+
     def create_batch(self, payload: BatchCreate) -> Batch:
         entity = Batch(**payload.model_dump())
         self.batches[entity.id] = entity
         return entity
+
+    def get_batch_by_name(self, organization_id: UUID, name: str) -> Batch | None:
+        name_lower = name.lower()
+        return next(
+            (
+                b
+                for b in self.batches.values()
+                if b.organization_id == organization_id and b.name.lower() == name_lower
+            ),
+            None,
+        )
 
     def create_student(self, payload: StudentCreate) -> Student:
         entity = Student(**payload.model_dump())
@@ -415,4 +433,3 @@ class InMemoryStore:
 
 
 store = InMemoryStore()
-
