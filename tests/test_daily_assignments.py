@@ -113,3 +113,152 @@ def test_run_daily_automation_generates_today_task_and_me_today_reads_it():
     assert today.status_code == 200
     assert today.json()["assignment"]["student_id"] == str(student.id)
     assert "Day 1:" in today.json()["task"]["title"]
+
+
+def test_student_submit_task_creates_submission_and_evaluation():
+    import asyncio
+
+    client, store = _make_client()
+    org, batch, student, _ = asyncio.run(_seed_profile(store))
+    client.post(
+        "/automation/run-daily",
+        json={"organization_id": str(org.id), "batch_id": str(batch.id), "assigned_on": str(date.today())},
+    )
+    login = client.post(
+        "/auth/register",
+        json={
+            "email": "akankshame422@gmail.com",
+            "password": "securepass",
+            "full_name": "Akanksha Kumari",
+            "organization_id": str(org.id),
+        },
+    ).json()
+    today = client.get("/me/today", headers={"Authorization": f"Bearer {login['access_token']}"}).json()
+
+    response = client.post(
+        f"/me/tasks/{today['task']['id']}/submit",
+        headers={"Authorization": f"Bearer {login['access_token']}"},
+        json={
+            "commit_url": "https://github.com/example/project-defense-ai/commit/abc123",
+            "explanation": "I implemented backend authorization checks and added tests for unauthorized access.",
+            "implementation_statement": "The FastAPI dependency verifies the current user role before task creation.",
+            "deployed_url": "https://project-defense-ai.vercel.app",
+            "evidence_notes": "pytest passed locally",
+        },
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["submission"]["student_id"] == str(student.id)
+    assert body["evaluation"]["score"] >= 70
+    assert "GITHUB_DIFF_NOT_INGESTED" in body["evaluation"]["flags"]
+    assert len(store.submissions) == 1
+    assert len(store.evaluations) == 1
+
+    fetched = client.get(
+        f"/me/submissions/{body['submission']['id']}/evaluation",
+        headers={"Authorization": f"Bearer {login['access_token']}"},
+    )
+    assert fetched.status_code == 200
+    assert fetched.json()["evaluation"]["id"] == body["evaluation"]["id"]
+
+
+def test_mentor_today_and_review_queue_show_flagged_submission():
+    import asyncio
+
+    client, store = _make_client()
+    org, batch, _, _ = asyncio.run(_seed_profile(store))
+    client.post(
+        "/automation/run-daily",
+        json={"organization_id": str(org.id), "batch_id": str(batch.id), "assigned_on": str(date.today())},
+    )
+    login = client.post(
+        "/auth/register",
+        json={
+            "email": "akankshame422@gmail.com",
+            "password": "securepass",
+            "full_name": "Akanksha Kumari",
+            "organization_id": str(org.id),
+        },
+    ).json()
+    today = client.get("/me/today", headers={"Authorization": f"Bearer {login['access_token']}"}).json()
+    client.post(
+        f"/me/tasks/{today['task']['id']}/submit",
+        headers={"Authorization": f"Bearer {login['access_token']}"},
+        json={
+            "commit_url": "https://github.com/example/project-defense-ai/commit/abc123",
+            "explanation": "I implemented backend authorization checks and added tests for unauthorized access.",
+            "implementation_statement": "The FastAPI dependency verifies the current user role before task creation.",
+        },
+    )
+
+    mentor_today = client.get("/mentor/today", params={"organization_id": str(org.id), "batch_id": str(batch.id)})
+    queue = client.get("/mentor/review-queue", params={"organization_id": str(org.id)})
+
+    assert mentor_today.status_code == 200
+    assert mentor_today.json()["totals"]["total_students"] == 1
+    assert mentor_today.json()["totals"]["submitted"] == 1
+    assert mentor_today.json()["totals"]["needs_review"] == 1
+    assert queue.status_code == 200
+    assert queue.json()["total"] == 1
+    assert "GITHUB_DIFF_NOT_INGESTED" in queue.json()["items"][0]["reasons"]
+
+
+def test_50_student_daily_assignment_simulation_has_no_duplicates():
+    import asyncio
+
+    async def _seed_50(store: InMemoryStore):
+        uow = AsyncMemoryUnitOfWork(store)
+        service = AsyncDailyLoopService(uow)
+        org = await service.create_organization(OrganizationCreate(name="Simulation Org", slug="simulation-org"))
+        batch = await service.create_batch(
+            BatchCreate(organization_id=org.id, name="Simulation Batch", starts_on=date(2026, 8, 17), ends_on=date(2026, 12, 31))
+        )
+        for index in range(50):
+            student = await service.create_student(
+                StudentCreate(
+                    organization_id=org.id,
+                    batch_id=batch.id,
+                    full_name=f"Student {index}",
+                    email=f"student{index}@example.com",
+                )
+            )
+            project = await service.create_project(
+                ProjectCreate(
+                    organization_id=org.id,
+                    student_id=student.id,
+                    name=f"Project {index}",
+                    repository_url=f"https://github.com/example/project-{index}",
+                )
+            )
+            await StudentProjectProfileService(uow).upsert_profile(
+                StudentProjectProfileCreate(
+                    student_id=student.id,
+                    organization_id=org.id,
+                    project_id=project.id,
+                    github_repository=f"https://github.com/example/project-{index}",
+                    project_title=f"Project {index}",
+                    current_weaknesses=["testing" if index % 2 else "system design"],
+                    tech_stack=["Python", "FastAPI"],
+                )
+            )
+        return org, batch
+
+    store = InMemoryStore()
+    org, batch = asyncio.run(_seed_50(store))
+    result = asyncio.run(DailyAssignmentService(AsyncMemoryUnitOfWork(store)).run_for_batch(org.id, batch.id, date(2026, 8, 17)))
+
+    assert result["students_processed"] == 50
+    assert result["tasks_generated"] == 50
+    assert result["errors"] == []
+    assert len(store.tasks) == 50
+    assert len(store.task_assignments) == 50
+    assert len({(a.student_id, a.assigned_on) for a in store.task_assignments.values()}) == 50
+    assert {a.organization_id for a in store.task_assignments.values()} == {org.id}
+    assert {a.batch_id for a in store.task_assignments.values()} == {batch.id}
+
+    second = asyncio.run(DailyAssignmentService(AsyncMemoryUnitOfWork(store)).run_for_batch(org.id, batch.id, date(2026, 8, 17)))
+    assert second["tasks_generated"] == 0
+    assert second["tasks_reused"] == 50
+    assert len(store.tasks) == 50
+    assert len(store.task_assignments) == 50
